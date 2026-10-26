@@ -164,7 +164,7 @@ def main():
         shutil.rmtree(stage)
     stage.mkdir(parents=True)
     binary = options.binary or ROOT / "target/release" / ("printmarten.exe" if options.platform == "windows" else "printmarten")
-    icon = Image.open(ROOT / "icon.jpg").convert("RGBA").resize((1024,1024), Image.Resampling.LANCZOS)
+    icon = Image.open(ROOT / "icon.png").convert("RGBA").resize((1024,1024), Image.Resampling.LANCZOS)
     globals()[options.platform](stage, out, name, binary.resolve(), options.native.resolve(), icon, options.arch, version)
     for path in sorted(out.glob(name + "*")):
         if path.suffix != ".sha256":

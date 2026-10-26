@@ -12,12 +12,6 @@ impl Rect {
     pub fn intersects(self, b: Self) -> bool {
         self.x < b.x + b.w && self.x + self.w > b.x && self.y < b.y + b.h && self.y + self.h > b.y
     }
-    fn contains(self, b: Self) -> bool {
-        self.x <= b.x
-            && self.y <= b.y
-            && self.x + self.w >= b.x + b.w
-            && self.y + self.h >= b.y + b.h
-    }
 }
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Placement {
@@ -39,54 +33,32 @@ pub struct Layout {
     pub cut_lines: bool,
 }
 
-/// Split every intersected free rectangle, then remove contained duplicates (MaxRects).
-fn occupy(free: &mut Vec<Rect>, used: Rect) {
-    let mut next = Vec::new();
-    for r in free.drain(..) {
-        if !r.intersects(used) {
-            next.push(r);
-            continue;
-        }
-        if used.x > r.x {
-            next.push(Rect {
-                w: used.x - r.x,
-                ..r
-            });
-        }
-        if used.x + used.w < r.x + r.w {
-            next.push(Rect {
-                x: used.x + used.w,
-                w: r.x + r.w - used.x - used.w,
-                ..r
-            });
-        }
-        if used.y > r.y {
-            next.push(Rect {
-                h: used.y - r.y,
-                ..r
-            });
-        }
-        if used.y + used.h < r.y + r.h {
-            next.push(Rect {
-                y: used.y + used.h,
-                h: r.y + r.h - used.y - used.h,
-                ..r
-            });
-        }
+/// Rotate physical photo dimensions so their long edge follows the sheet.
+fn sheet_size(size: Size, paper: Size) -> Size {
+    if size.w != size.h && paper.w != paper.h && (size.w > size.h) != (paper.w > paper.h) {
+        size.rotated()
+    } else {
+        size
     }
-    let mut i = 0;
-    while i < next.len() {
-        if (0..next.len())
-            .any(|j| i != j && next[j].contains(next[i]) && (next[j] != next[i] || j < i))
-        {
-            next.remove(i);
-        } else {
-            i += 1;
-        }
-    }
-    *free = next;
 }
 
+fn rotate_image(photo: &Photo, target: Size) -> bool {
+    target.w != target.h && photo.source_landscape != (target.w > target.h)
+}
+
+#[derive(Default)]
+struct Row {
+    photos: Vec<Placement>,
+    width: Length,
+    height: Length,
+}
+#[derive(Default)]
+struct Sheet {
+    rows: Vec<Row>,
+    height: Length,
+}
+
+/// Fixed-size photos in balanced rows, with equal extra space on every sheet.
 pub fn arrange(photos: &[Photo], settings: &Settings, hardware: Insets) -> Layout {
     let margins = hardware.max(Insets::uniform(settings.layout_margin()));
     let area = Rect {
@@ -95,10 +67,15 @@ pub fn arrange(photos: &[Photo], settings: &Settings, hardware: Insets) -> Layou
         w: settings.paper.w - margins.left - margins.right,
         h: settings.paper.h - margins.top - margins.bottom,
     };
+    let valid = settings.paper.valid() && area.w > 0 && area.h > 0;
     if settings.full_page {
+        let target = Size {
+            w: area.w,
+            h: area.h,
+        };
         return Layout {
             paper: settings.paper,
-            pages: if settings.paper.valid() && area.w > 0 && area.h > 0 {
+            pages: if valid {
                 photos
                     .iter()
                     .map(|photo| Page {
@@ -106,7 +83,7 @@ pub fn arrange(photos: &[Photo], settings: &Settings, hardware: Insets) -> Layou
                             photo_id: photo.id,
                             source: photo.source,
                             rect: area,
-                            rotated: false,
+                            rotated: rotate_image(photo, target),
                             fit: Fit::Fill,
                         }],
                     })
@@ -114,7 +91,7 @@ pub fn arrange(photos: &[Photo], settings: &Settings, hardware: Insets) -> Layou
             } else {
                 vec![]
             },
-            rejected: if settings.paper.valid() && area.w > 0 && area.h > 0 {
+            rejected: if valid {
                 vec![]
             } else {
                 photos.iter().map(|photo| photo.id).collect()
@@ -122,125 +99,121 @@ pub fn arrange(photos: &[Photo], settings: &Settings, hardware: Insets) -> Layou
             cut_lines: false,
         };
     }
-    let mut best: Option<Layout> = None;
-    // Different sorts and scoring rules improve mixed-size layouts without unstable randomization.
+    let gap = settings.gap.max(0);
+    let mut best = None;
+    // Try several deterministic orders to reduce sheet count for mixed sizes.
     for sort in 0..3 {
-        for score_kind in 0..2 {
-            let mut ordered: Vec<_> = photos.iter().collect();
-            ordered.sort_by_key(|p| {
-                let s = p.size(settings.default_size);
-                let key = match sort {
-                    0 => s.w * s.h,
-                    1 => s.w.max(s.h),
-                    _ => s.w.min(s.h),
-                };
-                (std::cmp::Reverse(key), p.id)
-            });
-            let gap = settings.gap.max(0);
-            // Include one trailing gap in the packing bin so photos can touch the usable edge.
-            let bin = Rect {
-                w: area.w + gap,
-                h: area.h + gap,
-                ..area
+        let mut ordered: Vec<_> = photos.iter().collect();
+        ordered.sort_by_key(|photo| {
+            let size = sheet_size(photo.size(settings.default_size), settings.paper);
+            let score = match sort {
+                0 => (size.h, size.w),
+                1 => (size.w * size.h, size.h),
+                _ => (size.w, size.h),
             };
-            let mut free_pages: Vec<Vec<Rect>> = Vec::new();
-            let mut result = Layout {
-                paper: settings.paper,
-                pages: vec![],
-                rejected: vec![],
-                cut_lines: settings.cut_lines,
-            };
-            for p in ordered {
-                let s = p.size(settings.default_size);
-                if !settings.paper.valid()
-                    || !s.valid()
-                    || area.w <= 0
-                    || area.h <= 0
-                    || !((s.w <= area.w && s.h <= area.h) || (s.h <= area.w && s.w <= area.h))
-                {
-                    result.rejected.push(p.id);
-                    continue;
-                }
-                let mut choice = None;
-                for page in 0..=free_pages.len() {
-                    let candidates: &[Rect] = if page == free_pages.len() {
-                        std::slice::from_ref(&bin)
-                    } else {
-                        &free_pages[page]
-                    };
-                    for &r in candidates {
-                        for rotated in [false, true] {
-                            let size = if rotated { s.rotated() } else { s };
-                            let (w, h) = (size.w + gap, size.h + gap);
-                            if w > r.w || h > r.h {
-                                continue;
-                            }
-                            let short = (r.w - w).min(r.h - h);
-                            let waste = r.w * r.h - w * h;
-                            let score = if score_kind == 0 {
-                                (short, waste)
-                            } else {
-                                (waste, short)
-                            };
-                            let rank = (page, score, r.y, r.x, rotated);
-                            if choice.as_ref().is_none_or(|(old, _, _)| rank < *old) {
-                                choice = Some((
-                                    rank,
-                                    Rect {
-                                        x: r.x,
-                                        y: r.y,
-                                        w,
-                                        h,
-                                    },
-                                    rotated,
-                                ));
-                            }
+            (std::cmp::Reverse(score), photo.id)
+        });
+        let mut sheets: Vec<Sheet> = vec![];
+        let mut rejected = vec![];
+        for photo in ordered {
+            let size = sheet_size(photo.size(settings.default_size), settings.paper);
+            if !valid || !size.valid() || size.w > area.w || size.h > area.h {
+                rejected.push(photo.id);
+                continue;
+            }
+            let mut choice = None;
+            for (page, sheet) in sheets.iter().enumerate() {
+                for (row_index, row) in sheet.rows.iter().enumerate() {
+                    let extra_height = (size.h - row.height).max(0);
+                    let width = row.width + gap + size.w;
+                    if width <= area.w && sheet.height + extra_height <= area.h {
+                        let rank = (page, extra_height, area.w - width, row_index);
+                        if choice.is_none_or(|old| rank < old) {
+                            choice = Some(rank);
                         }
                     }
                 }
-                let (rank, used, rotated) = choice.expect("validated photo must fit a fresh bin");
-                let page = rank.0;
-                if page == free_pages.len() {
-                    free_pages.push(vec![bin]);
-                    result.pages.push(Page::default());
+                if choice.is_some_and(|rank| rank.0 == page) {
+                    break;
                 }
-                occupy(&mut free_pages[page], used);
-                result.pages[page].photos.push(Placement {
-                    photo_id: p.id,
-                    source: p.source,
-                    rect: Rect {
-                        w: used.w - gap,
-                        h: used.h - gap,
-                        ..used
-                    },
-                    rotated,
-                    fit: p.fit,
-                });
+                if sheet.height + gap + size.h <= area.h {
+                    choice = Some((page, size.h + gap, area.w - size.w, sheet.rows.len()));
+                    break;
+                }
             }
-            result.rejected.sort_unstable();
-            if best.as_ref().is_none_or(|b| quality(&result) < quality(b)) {
-                best = Some(result);
+            let (page, _, _, row_index) = choice.unwrap_or((sheets.len(), 0, 0, 0));
+            if page == sheets.len() {
+                sheets.push(Sheet::default());
             }
+            let sheet = &mut sheets[page];
+            if row_index == sheet.rows.len() {
+                if !sheet.rows.is_empty() {
+                    sheet.height += gap;
+                }
+                sheet.rows.push(Row::default());
+            }
+            let row = &mut sheet.rows[row_index];
+            sheet.height += (size.h - row.height).max(0);
+            row.height = row.height.max(size.h);
+            if !row.photos.is_empty() {
+                row.width += gap;
+            }
+            row.width += size.w;
+            row.photos.push(Placement {
+                photo_id: photo.id,
+                source: photo.source,
+                rect: Rect {
+                    x: 0,
+                    y: 0,
+                    w: size.w,
+                    h: size.h,
+                },
+                rotated: rotate_image(photo, size),
+                fit: photo.fit,
+            });
+        }
+        let score = (
+            sheets.len(),
+            sheets.iter().map(|sheet| sheet.height).sum::<Length>(),
+        );
+        if best
+            .as_ref()
+            .is_none_or(|(old_score, _, _)| score < *old_score)
+        {
+            best = Some((score, sheets, rejected));
         }
     }
-    best.unwrap()
-}
-
-fn quality(layout: &Layout) -> (usize, i64) {
-    (
-        layout.pages.len(),
-        layout
-            .pages
-            .iter()
-            .map(|p| {
-                p.photos
-                    .iter()
-                    .map(|p| p.rect.y + p.rect.h)
-                    .max()
-                    .unwrap_or(0)
-            })
-            .sum(),
-    )
+    let (_, sheets, mut rejected) = best.unwrap();
+    rejected.sort_unstable();
+    let pages = sheets
+        .into_iter()
+        .map(|sheet| {
+            let extra_y = area.h - sheet.height;
+            let row_count = sheet.rows.len() as Length;
+            let mut y = area.y;
+            let mut page = Page::default();
+            for (row_index, row) in sheet.rows.into_iter().enumerate() {
+                let top = y + extra_y * (row_index as Length + 1) / (row_count + 1);
+                let extra_x = area.w - row.width;
+                let count = row.photos.len() as Length;
+                let mut x = area.x;
+                for (column, mut photo) in row.photos.into_iter().enumerate() {
+                    photo.rect.x = x + extra_x * (column as Length + 1) / (count + 1);
+                    photo.rect.y = top + (row.height - photo.rect.h) / 2;
+                    x += photo.rect.w + gap;
+                    page.photos.push(photo);
+                }
+                y += row.height + gap;
+            }
+            page
+        })
+        .collect();
+    Layout {
+        paper: settings.paper,
+        pages,
+        rejected,
+        cut_lines: settings.cut_lines,
+    }
 }
 
 /// Normalized UV rectangle; rotation is applied to the image before this crop.
@@ -280,12 +253,14 @@ mod tests {
             Photo {
                 id: 1,
                 source: 0,
+                source_landscape: false,
                 override_size: Some(Size::mm(30, 40)),
                 fit: Fit::Contain,
             },
             Photo {
                 id: 2,
                 source: 0,
+                source_landscape: false,
                 override_size: None,
                 fit: Fit::Fill,
             },
@@ -345,6 +320,7 @@ mod tests {
             .map(|id| Photo {
                 id,
                 source: 0,
+                source_landscape: false,
                 override_size: size,
                 fit: Fit::Fill,
             })
@@ -369,12 +345,74 @@ mod tests {
             2
         );
         settings.default_size = Size::mm(100, 150);
+        // Long edges stay parallel to the portrait sheet, even when rotating
+        // a rectangle would allow a more compact arrangement.
         assert_eq!(
             arrange(&photos(2, None), &settings, Insets::default())
                 .pages
                 .len(),
-            1
+            2
         );
+    }
+    #[test]
+    fn image_and_print_dimensions_follow_the_long_sheet_edge() {
+        for paper in [Size::mm(210, 297), Size::mm(297, 210)] {
+            for source_landscape in [false, true] {
+                for size in [Size::mm(60, 90), Size::mm(90, 60)] {
+                    let mut settings = Settings {
+                        paper,
+                        default_size: size,
+                        ..Settings::default()
+                    };
+                    let mut photos = photos(3, None);
+                    for photo in &mut photos {
+                        photo.source_landscape = source_landscape;
+                    }
+                    for full_page in [false, true] {
+                        settings.full_page = full_page;
+                        let layout = arrange(&photos, &settings, Insets::default());
+                        for placement in layout.pages.iter().flat_map(|page| &page.photos) {
+                            assert_eq!(placement.rect.w > placement.rect.h, paper.w > paper.h);
+                            assert_eq!(placement.rotated, source_landscape != (paper.w > paper.h));
+                            if !full_page {
+                                assert_eq!(placement.rect.w * placement.rect.h, size.w * size.h);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    #[test]
+    fn equal_size_rows_have_equal_gaps_and_balanced_outer_spacing() {
+        let settings = Settings {
+            default_size: Size::mm(60, 90),
+            ..Settings::default()
+        };
+        let layout = arrange(&photos(6, None), &settings, Insets::default());
+        let placements = &layout.pages[0].photos;
+        assert_eq!(placements.len(), 6);
+        let margin = settings.layout_margin();
+        let first = &placements[..3];
+        let second = &placements[3..];
+        for row in [first, second] {
+            let extras = [
+                row[0].rect.x - margin,
+                row[1].rect.x - row[0].rect.x - row[0].rect.w - settings.gap,
+                row[2].rect.x - row[1].rect.x - row[1].rect.w - settings.gap,
+                settings.paper.w - margin - row[2].rect.x - row[2].rect.w,
+            ];
+            assert!(extras.iter().max().unwrap() - extras.iter().min().unwrap() <= 1);
+        }
+        let extras = [
+            first[0].rect.y - margin,
+            second[0].rect.y - first[0].rect.y - first[0].rect.h - settings.gap,
+            settings.paper.h - margin - second[0].rect.y - second[0].rect.h,
+        ];
+        assert!(extras.iter().max().unwrap() - extras.iter().min().unwrap() <= 1);
+        let partial = arrange(&photos(4, None), &settings, Insets::default());
+        let last = partial.pages[0].photos.last().unwrap();
+        assert_eq!(last.rect.x * 2 + last.rect.w, settings.paper.w);
     }
     #[test]
     fn mixed_layout_is_deterministic_and_respects_hardware_and_gap() {

@@ -10,6 +10,8 @@
 - UI state transitions for selections, copies, removal, and size resets.
 - Workflow syntax and package structure, checksums, architecture, and executable smoke checks.
 - Photo-paper borderless defaults, full-page portrait/landscape layouts, preserved custom sizes, rejection of non-borderless printer geometry, and edge-to-edge PDF/raster coverage.
+- Long-edge alignment for image pixels and print rectangles, equal extra spacing in rows, centered partial rows, and exact passport/ID and wallet preset sizes.
+- Recursive folder discovery, filename order, mixed-case extensions, duplicate paths, symlink cycles, empty/missing folders, and background loading with corrupt-image reporting.
 
 ## Manual acceptance checklist (each target)
 
@@ -30,10 +32,13 @@ Targets: macOS Intel, macOS Apple Silicon, Windows x64, Linux x64 on X11 and Way
 13. Select 10 × 15 cm / 4 × 6 in paper and verify Photo paper and Borderless start enabled. For A4 photo stock, enable Photo paper explicitly. Verify Borderless can be turned off and normal margins return.
 14. Enable Full page with mixed image shapes and customized photo sizes. Verify one cropped photo per sheet, no cut lines, and coverage to every page edge. Switch orientation and paper size in both the app and print dialog; review any changed layout. Turn Full page off and verify custom sizes/crop choices return.
 15. On a borderless-capable printer, check the initial borderless paper selection for the default printer, then switch printers and explicitly select a borderless mode if required. Print and measure an edge-to-edge photo. Check a printer/paper combination without borderless support: it must report unprintable margins and require settings changes rather than silently clip the job.
+16. Import a nested folder via Add folder, drag-and-drop, and a command-line path. Confirm only supported photos appear and other files are skipped. Confirm the window remains responsive and corrupt images are reported while valid photos load.
+17. Print landscape and portrait source images onto both sheet orientations. Check that image and photo-rectangle long edges follow the sheet's long edge, including in Full page mode. Choose passport/ID sizes and verify the physical cut dimensions.
+18. Add several equal-sized photos and change minimum margins/gaps. Check equal gaps across each row, balanced rows, centered partial rows, and unchanged physical photo sizes. Repeat with mixed sizes and the selected printer's actual margins.
 
 ## Local results (2026-10-26)
 
-- Intel macOS: all 19 tests pass, including the real libheif HEIC fixture, headless preview, PDF measurements, raster placement, photo-paper defaults, and full-page borderless output.
+- Intel macOS: all 27 tests pass, including the real libheif HEIC fixture, headless preview, PDF measurements, raster placement, photo-paper defaults, full-page borderless output, long-edge rotation, balanced spacing, photo presets, and recursive folder importing.
 - Formatting and strict Clippy checks pass. Workflow syntax passes actionlint; packaging scripts pass Python syntax checks.
 - The complete application passes an Apple Silicon `cargo check`. This is a cross-compile check, not execution on Apple Silicon.
 - The actual Windows adapter passes strict Clippy/type checks for the MSVC target using a compile-only harness. No Windows executable has been run locally.

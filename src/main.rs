@@ -26,9 +26,7 @@ fn main() -> anyhow::Result<()> {
     if args.iter().any(|s| s == "--print-helper") {
         return printmarten::printing::helper();
     }
-    let icon = image::load_from_memory(include_bytes!("../icon.jpg"))?
-        .thumbnail(256, 256)
-        .to_rgba8();
+    let icon = printmarten::branding::icon(256);
     let options = eframe::NativeOptions {
         viewport: eframe::egui::ViewportBuilder::default()
             .with_title("PrintMarten")

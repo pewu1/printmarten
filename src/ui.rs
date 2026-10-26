@@ -1,6 +1,7 @@
 use eframe::egui::{self, Color32, Pos2, Rect, Stroke, StrokeKind, Vec2};
 use printmarten::{
     imaging::{self, Source},
+    importing,
     layout::{self, Layout},
     model::*,
     printing::{self, Prepared},
@@ -39,8 +40,13 @@ type ImportResult = (
     PathBuf,
     anyhow::Result<(Source, image::RgbImage, image::RgbImage)>,
 );
+enum ImportEvent {
+    Discovered { files: usize, errors: Vec<String> },
+    Loaded(ImportResult),
+}
 
 pub struct App {
+    brand_icon: egui::TextureHandle,
     settings: Settings,
     photos: Vec<Photo>,
     sources: Vec<Source>,
@@ -52,8 +58,8 @@ pub struct App {
     unit: Unit,
     editor: Option<SizeEditor>,
     zoom: f32,
-    import: Sender<PathBuf>,
-    received: Receiver<ImportResult>,
+    import: Sender<Vec<PathBuf>>,
+    received: Receiver<ImportEvent>,
     pending: usize,
     memory: usize,
     notice: String,
@@ -69,25 +75,45 @@ impl App {
         style.spacing.item_spacing = Vec2::new(10.0, 8.0);
         context.set_style(style);
         context.set_visuals(egui::Visuals::light());
-        let (tx, rx) = mpsc::channel::<PathBuf>();
-        let (done, received) = mpsc::channel();
+        let icon = printmarten::branding::icon(64);
+        let brand_icon = context.load_texture(
+            "printmarten-icon",
+            egui::ColorImage::from_rgba_unmultiplied([64, 64], icon.as_raw()),
+            egui::TextureOptions::LINEAR,
+        );
+        let (tx, rx) = mpsc::channel::<Vec<PathBuf>>();
+        let (done, received) = mpsc::sync_channel(1);
         let ctx = context.clone();
         std::thread::spawn(move || {
-            for path in rx {
-                let result = imaging::load(&path).map(|source| {
-                    let thumb = image::imageops::thumbnail(source.pixels.as_ref(), 640, 640);
-                    let rotated = image::imageops::rotate90(&thumb);
-                    (source, thumb, rotated)
-                });
-                if done.send((path, result)).is_err() {
+            for paths in rx {
+                let (paths, errors) = importing::discover(paths);
+                if done
+                    .send(ImportEvent::Discovered {
+                        files: paths.len(),
+                        errors,
+                    })
+                    .is_err()
+                {
                     break;
                 }
                 ctx.request_repaint();
+                for path in paths {
+                    let result = imaging::load(&path).map(|source| {
+                        let thumb = image::imageops::thumbnail(source.pixels.as_ref(), 640, 640);
+                        let rotated = image::imageops::rotate90(&thumb);
+                        (source, thumb, rotated)
+                    });
+                    if done.send(ImportEvent::Loaded((path, result))).is_err() {
+                        return;
+                    }
+                    ctx.request_repaint();
+                }
             }
         });
         let settings = Settings::default();
         let layout = layout::arrange(&[], &settings, Insets::default());
         let mut app = Self {
+            brand_icon,
             settings,
             photos: vec![],
             sources: vec![],
@@ -111,21 +137,32 @@ impl App {
         app
     }
     fn queue(&mut self, paths: Vec<PathBuf>) {
-        for path in paths {
-            if path.is_file() {
-                if self.import.send(path).is_ok() {
-                    self.pending += 1;
-                }
-            } else {
-                self.errors.push(format!(
-                    "{}: select image files rather than folders",
-                    path.display()
-                ));
-            }
+        if !paths.is_empty() && self.import.send(paths).is_ok() {
+            self.pending += 1;
         }
     }
+    fn brand(&self, ui: &mut egui::Ui) {
+        ui.horizontal(|ui| {
+            ui.add(
+                egui::Image::new((self.brand_icon.id(), Vec2::splat(32.0)))
+                    .alt_text("PrintMarten icon"),
+            );
+            ui.heading(egui::RichText::new("PrintMarten").color(Color32::from_rgb(0, 115, 170)));
+        });
+    }
     fn poll_import(&mut self, ctx: &egui::Context) {
-        while let Ok((path, result)) = self.received.try_recv() {
+        for _ in 0..16 {
+            let Ok(event) = self.received.try_recv() else {
+                break;
+            };
+            let (path, result) = match event {
+                ImportEvent::Discovered { files, errors } => {
+                    self.pending = self.pending.saturating_sub(1) + files;
+                    self.errors.extend(errors);
+                    continue;
+                }
+                ImportEvent::Loaded(result) => result,
+            };
             self.pending = self.pending.saturating_sub(1);
             match result {
                 Ok((source, thumb, rotated)) => {
@@ -150,10 +187,12 @@ impl App {
                         normal: load(&thumb, format!("photo-{source_index}")),
                         rotated: load(&rotated, format!("photo-{source_index}-rotated")),
                     });
+                    let source_landscape = source.pixels.width() > source.pixels.height();
                     self.sources.push(source);
                     self.photos.push(Photo {
                         id: self.next_id,
                         source: source_index,
+                        source_landscape,
                         override_size: None,
                         fit: Fit::Fill,
                     });
@@ -233,12 +272,16 @@ impl App {
     fn context_menu(ui: &mut egui::Ui) -> Option<Action> {
         let mut result = None;
         ui.menu_button("Print size", |ui| {
-            for &(name, size) in PHOTO_PRESETS {
-                if ui.button(name).clicked() {
-                    result = Some(Action::Size(size));
-                    ui.close();
-                }
-            }
+            egui::ScrollArea::vertical()
+                .max_height(300.0)
+                .show(ui, |ui| {
+                    for &(name, size) in PHOTO_PRESETS {
+                        if ui.button(name).clicked() {
+                            result = Some(Action::Size(size));
+                            ui.close();
+                        }
+                    }
+                });
             if ui.button("Custom size…").clicked() {
                 result = Some(Action::Custom);
                 ui.close();
@@ -368,7 +411,7 @@ impl App {
         let mut margin = self.settings.margin as f64 / 1000.0;
         let mut gap = self.settings.gap as f64 / 1000.0;
         ui.horizontal(|ui| {
-            ui.label("Margin");
+            ui.label("Min. margin");
             if ui
                 .add_enabled(
                     !self.settings.borderless,
@@ -384,7 +427,7 @@ impl App {
             }
         });
         ui.horizontal(|ui| {
-            ui.label("Gap");
+            ui.label("Min. gap");
             if ui
                 .add_enabled(
                     !self.settings.full_page,
@@ -399,6 +442,7 @@ impl App {
                 self.dirty = true;
             }
         });
+        ui.small("Extra space is shared evenly between photos and rows.");
         if ui
             .add_enabled(
                 !self.settings.full_page,
@@ -504,9 +548,11 @@ impl App {
         if self.photos.is_empty() {
             ui.centered_and_justified(|ui| {
                 ui.label(
-                    egui::RichText::new("Drop photos here\nor choose Add photos to get started")
-                        .size(25.0)
-                        .color(Color32::from_gray(100)),
+                    egui::RichText::new(
+                        "Drop photos or folders here\nor choose Add photos to get started",
+                    )
+                    .size(25.0)
+                    .color(Color32::from_gray(100)),
                 );
             });
             return;
@@ -766,20 +812,17 @@ impl eframe::App for App {
         }
         let mut print = false;
         egui::TopBottomPanel::top("toolbar").show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                ui.heading(
-                    egui::RichText::new("PrintMarten").color(Color32::from_rgb(0, 115, 170)),
-                );
+            ui.horizontal_wrapped(|ui| {
+                self.brand(ui);
                 if ui.button("Add photos…").clicked()
                     && let Some(paths) = rfd::FileDialog::new()
-                        .add_filter(
-                            "Photos",
-                            &[
-                                "jpg", "jpeg", "png", "webp", "tif", "tiff", "bmp", "heic", "heif",
-                                "hif",
-                            ],
-                        )
+                        .add_filter("Photos", importing::IMAGE_EXTENSIONS)
                         .pick_files()
+                {
+                    self.queue(paths);
+                }
+                if ui.button("Add folder…").clicked()
+                    && let Some(paths) = rfd::FileDialog::new().pick_folders()
                 {
                     self.queue(paths);
                 }
@@ -913,6 +956,7 @@ mod tests {
             .map(|id| Photo {
                 id,
                 source: 0,
+                source_landscape: true,
                 override_size: None,
                 fit: Fit::Fill,
             })
@@ -920,6 +964,34 @@ mod tests {
         app.next_id = 4;
         app.rebuild();
         (context, app)
+    }
+    #[test]
+    fn importing_a_folder_loads_nested_photos_and_reports_corrupt_images() {
+        let directory = tempfile::tempdir().unwrap();
+        std::fs::create_dir(directory.path().join("nested")).unwrap();
+        image::RgbImage::new(40, 20)
+            .save(directory.path().join("a.png"))
+            .unwrap();
+        image::RgbImage::new(20, 40)
+            .save(directory.path().join("nested/b.png"))
+            .unwrap();
+        std::fs::write(directory.path().join("broken.jpg"), b"invalid").unwrap();
+        std::fs::write(directory.path().join("notes.txt"), b"ignored").unwrap();
+        let context = egui::Context::default();
+        let mut app = App::from_context(&context, vec![directory.path().into()]);
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+        while app.pending > 0 && std::time::Instant::now() < deadline {
+            app.poll_import(&context);
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        }
+        assert_eq!(app.pending, 0);
+        assert_eq!(app.photos.len(), 2);
+        assert_eq!(app.errors.len(), 1);
+        assert!(app.errors[0].contains("broken.jpg"));
+        assert!(app.photos[0].source_landscape);
+        assert!(!app.photos[1].source_landscape);
+        app.rebuild();
+        assert!(app.layout.pages[0].photos[0].rotated);
     }
     #[test]
     fn multi_selection_copy_and_reset_leave_other_instances_unchanged() {
@@ -965,6 +1037,7 @@ mod tests {
                 ..Default::default()
             },
             |ctx| {
+                egui::TopBottomPanel::top("test-brand").show(ctx, |ui| app.brand(ui));
                 egui::SidePanel::left("test-controls")
                     .exact_width(265.0)
                     .show(ctx, |ui| {

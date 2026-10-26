@@ -70,11 +70,40 @@ impl Unit {
 }
 
 pub const PHOTO_PRESETS: &[(&str, Size)] = &[
+    ("Passport / ID · 35 × 45 mm", Size::mm(35, 45)),
+    ("Passport / ID · 2 × 2 in", Size { w: 50800, h: 50800 }),
+    ("ID · 25 × 35 mm", Size::mm(25, 35)),
+    ("ID · 30 × 40 mm", Size::mm(30, 40)),
+    ("ID · 33 × 48 mm", Size::mm(33, 48)),
+    ("Wallet · 2 × 3 in", Size { w: 50800, h: 76200 }),
+    ("Wallet · 2.5 × 3.5 in", Size { w: 63500, h: 88900 }),
     ("9 × 13 cm", Size::mm(90, 130)),
     ("10 × 15 cm", Size::mm(100, 150)),
     ("13 × 18 cm", Size::mm(130, 180)),
     ("15 × 20 cm", Size::mm(150, 200)),
     ("20 × 25 cm", Size::mm(200, 250)),
+    ("20 × 30 cm", Size::mm(200, 300)),
+    (
+        "3.5 × 5 in",
+        Size {
+            w: 88900,
+            h: 127000,
+        },
+    ),
+    (
+        "6 × 8 in",
+        Size {
+            w: 152400,
+            h: 203200,
+        },
+    ),
+    (
+        "8 × 12 in",
+        Size {
+            w: 203200,
+            h: 304800,
+        },
+    ),
     (
         "4 × 6 in",
         Size {
@@ -133,6 +162,40 @@ pub const PAPER_PRESETS: &[(&str, Size)] = &[
         },
     ),
 ];
+// Print-size presets also contain small ID and wallet formats, which do not
+// imply that the sheet itself is photo stock.
+const PHOTO_PAPER_SIZES: &[Size] = &[
+    Size::mm(90, 130),
+    Size::mm(100, 150),
+    Size::mm(130, 180),
+    Size::mm(150, 200),
+    Size::mm(200, 250),
+    Size::mm(200, 300),
+    Size {
+        w: 88900,
+        h: 127000,
+    },
+    Size {
+        w: 101600,
+        h: 152400,
+    },
+    Size {
+        w: 127000,
+        h: 177800,
+    },
+    Size {
+        w: 152400,
+        h: 203200,
+    },
+    Size {
+        w: 203200,
+        h: 254000,
+    },
+    Size {
+        w: 203200,
+        h: 304800,
+    },
+];
 pub fn size_label(size: Size) -> String {
     format!(
         "{} × {} mm",
@@ -152,6 +215,8 @@ pub enum Fit {
 pub struct Photo {
     pub id: u64,
     pub source: usize,
+    #[serde(default)]
+    pub source_landscape: bool,
     pub override_size: Option<Size>,
     pub fit: Fit,
 }
@@ -225,9 +290,9 @@ impl Settings {
     pub fn select_paper(&mut self, paper: Size) {
         self.paper = paper;
         self.set_photo_paper(
-            PHOTO_PRESETS
+            PHOTO_PAPER_SIZES
                 .iter()
-                .any(|(_, size)| *size == paper || size.rotated() == paper),
+                .any(|size| *size == paper || size.rotated() == paper),
         );
     }
 
@@ -256,6 +321,36 @@ mod tests {
         settings.set_photo_paper(true);
         assert!(settings.borderless); // Photo stock can also be A4 or custom-sized.
         assert_eq!(settings.margin, 5000);
+        settings.select_paper(Size::mm(35, 45));
+        assert!(!settings.photo_paper && !settings.borderless);
+    }
+    #[test]
+    fn passport_and_wallet_presets_have_exact_physical_dimensions() {
+        assert_eq!(
+            PHOTO_PRESETS
+                .iter()
+                .find(|(name, _)| *name == "Passport / ID · 35 × 45 mm")
+                .unwrap()
+                .1,
+            Size::mm(35, 45)
+        );
+        assert_eq!(
+            PHOTO_PRESETS
+                .iter()
+                .find(|(name, _)| *name == "Passport / ID · 2 × 2 in")
+                .unwrap()
+                .1,
+            Size { w: 50800, h: 50800 }
+        );
+        assert_eq!(
+            PHOTO_PRESETS
+                .iter()
+                .find(|(name, _)| *name == "Wallet · 2 × 3 in")
+                .unwrap()
+                .1,
+            Size { w: 50800, h: 76200 }
+        );
+        assert!(PHOTO_PRESETS.iter().all(|(_, size)| size.valid()));
     }
     #[test]
     fn conversions_are_exact_and_accept_decimal_comma() {
@@ -275,6 +370,7 @@ mod tests {
         let mut photo = Photo {
             id: 1,
             source: 0,
+            source_landscape: false,
             override_size: None,
             fit: Fit::Fill,
         };

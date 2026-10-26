@@ -81,6 +81,7 @@ mod tests {
         let photos = [Photo {
             id: 1,
             source: 0,
+            source_landscape: false,
             override_size: None,
             fit: Fit::Fill,
         }];
@@ -110,12 +111,14 @@ mod tests {
             Photo {
                 id: 1,
                 source: 0,
+                source_landscape: false,
                 override_size: None,
                 fit: Fit::Fill,
             },
             Photo {
                 id: 2,
                 source: 0,
+                source_landscape: false,
                 override_size: None,
                 fit: Fit::Fill,
             },

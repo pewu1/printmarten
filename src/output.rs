@@ -199,6 +199,57 @@ fn paint_photo(page: &mut RgbImage, source: &Source, p: &Placement, scale: f64) 
 mod tests {
     use super::*;
     #[test]
+    fn auto_rotated_full_page_keeps_image_edges_in_raster_and_pdf() {
+        let mut pixels = RgbImage::from_pixel(40, 20, Rgb([255, 0, 0]));
+        for y in 0..20 {
+            for x in 20..40 {
+                pixels.put_pixel(x, y, Rgb([0, 0, 255]));
+            }
+        }
+        let sources = [Source {
+            path: "landscape.png".into(),
+            pixels: std::sync::Arc::new(pixels),
+        }];
+        let settings = Settings {
+            paper: Size::mm(20, 40),
+            full_page: true,
+            borderless: true,
+            ..Settings::default()
+        };
+        let layout = crate::layout::arrange(
+            &[Photo {
+                id: 1,
+                source: 0,
+                source_landscape: true,
+                override_size: None,
+                fit: Fit::Fill,
+            }],
+            &settings,
+            Insets::default(),
+        );
+        assert!(layout.pages[0].photos[0].rotated);
+        let raster = raster_page(&layout, 0, &sources, 25.4).unwrap();
+        assert_eq!(raster.get_pixel(10, 0).0, [255, 0, 0]);
+        assert_eq!(raster.get_pixel(10, 39).0, [0, 0, 255]);
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("rotated.pdf");
+        write_pdf(&layout, &sources, &path).unwrap();
+        let doc = Document::load(path).unwrap();
+        let image = doc
+            .objects
+            .values()
+            .filter_map(|object| object.as_stream().ok())
+            .find(|stream| {
+                stream
+                    .dict
+                    .get(b"Subtype")
+                    .is_ok_and(|subtype| subtype.as_name().is_ok_and(|name| name == b"Image"))
+            })
+            .unwrap();
+        assert_eq!(image.dict.get(b"Width").unwrap().as_i64().unwrap(), 20);
+        assert_eq!(image.dict.get(b"Height").unwrap().as_i64().unwrap(), 40);
+    }
+    #[test]
     fn borderless_full_page_raster_and_pdf_cover_every_edge() {
         let sources = [Source {
             path: "full-page".into(),
@@ -214,6 +265,7 @@ mod tests {
             &[Photo {
                 id: 1,
                 source: 0,
+                source_landscape: false,
                 override_size: None,
                 fit: Fit::Contain,
             }],
@@ -293,6 +345,7 @@ mod tests {
             &[Photo {
                 id: 1,
                 source: 0,
+                source_landscape: false,
                 override_size: None,
                 fit: Fit::Fill,
             }],

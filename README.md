@@ -5,13 +5,17 @@ and print through your operating system's printer dialog.
 
 ## Using PrintMarten
 
-1. Choose **Add photos…** or drag multiple image files into the window.
+1. Choose **Add photos…**, **Add folder…**, or drag image files/folders into the
+   window. Folders include supported photos from subfolders, in filename order;
+   other file types and folder symlinks are skipped. Duplicate file paths within
+   one import are loaded once. Folder scanning and decoding run in the background.
 2. Select paper size/orientation and a default photo size. Custom sizes accept
    centimeters, millimeters, or inches, including decimal-comma input.
 3. Click a photo in the sheet preview or thumbnail list. Ctrl/Cmd-click selects
    several. Right-click for sizes, **Reset to default size**, **Crop to fill**,
    **Fit whole image**, **Add one copy**, and **Remove**.
-4. Adjust margins and spacing. Enable **Print cut lines** if wanted.
+4. Adjust **Min. margin** and **Min. gap**. Spare space is distributed evenly
+   around photos and between rows. Enable **Print cut lines** if wanted.
 5. Choose **Print…** and select a printer. The dialog starts with your paper
    size and orientation. If printer settings change the arrangement, inspect
    the updated sheets and choose **Print reviewed layout**.
@@ -34,12 +38,20 @@ printer settings must report zero unprintable margins for borderless printing;
 otherwise PrintMarten asks you to change the settings. Printer support depends
 on the selected paper size and media type.
 
-In the usual packed-sheet mode, individual size overrides survive changes to the default size. Copies share
-image data but can be resized independently. Automatic packing can reorder
-photos and rotate them 90°; it never shrinks the requested photo size.
-Photos that cannot fit are listed and prevent printing. The packing algorithm
-tries several deterministic MaxRects strategies; it does not guarantee a
-mathematically optimal packing.
+Photo sizes include passport/ID formats (35 × 45 mm and 2 × 2 in), smaller ID
+formats, wallet prints, and additional standard photo sizes. Presets are available
+both as the default size and in each photo's **Print size** menu.
+
+In packed-sheet mode, individual size overrides survive changes to the default
+size. Copies share image data but can be resized independently. Photos and their
+print rectangles rotate 90° as needed so their long edge follows the sheet's
+long edge. Full-page mode uses the same image orientation rule. Physical print
+sizes are preserved; a photo that cannot fit in that orientation is rejected.
+Keeping long edges aligned can require more sheets than unrestricted rotation.
+The layout tries several deterministic row orders, then balances each row and
+the space between rows within the printable area. Margins and gaps are minimums;
+remaining space is shared equally, with differences of at most one micrometer
+from rounding. This does not guarantee a mathematically optimal packing.
 
 JPEG, PNG, WebP, TIFF, BMP, HEIC, and HEIF are supported. Orientation metadata is
 applied, RGB ICC profiles are converted to sRGB, and transparency is flattened
