@@ -1,0 +1,4 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>PrintMarten dependency licenses</title></head>
+<body><h1>PrintMarten dependency licenses</h1>
+{{#each licenses}}<h2>{{name}}</h2><p>Used by {{#each used_by}}{{crate.name}} {{crate.version}}; {{/each}}</p><pre>{{text}}</pre>{{/each}}
+</body></html>

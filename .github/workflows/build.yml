@@ -1,0 +1,127 @@
+name: Build PrintMarten
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.platform }}-${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15-intel
+            platform: macos
+            arch: x64
+            target: x86_64-apple-darwin
+          - runner: macos-15
+            platform: macos
+            arch: arm64
+            target: aarch64-apple-darwin
+          - runner: windows-2022
+            platform: windows
+            arch: x64
+            target: x86_64-pc-windows-msvc
+          - runner: ubuntu-24.04
+            platform: linux
+            arch: x64
+            target: x86_64-unknown-linux-gnu
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    env:
+      CARGO_TERM_COLOR: always
+      MACOSX_DEPLOYMENT_TARGET: '13.0'
+      PRINTMARTEN_NATIVE_LIB_DIR: ${{ github.workspace }}/target/native/lib
+      PRINTMARTEN_HEIC_FIXTURE: ${{ github.workspace }}/target/native-sources/libheif-1.23.1/examples/example.heic
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-4-dev libgl1-mesa-dev libegl1-mesa-dev libxkbcommon-dev libwayland-dev libx11-dev libxcb1-dev pkg-config dpkg-dev
+      - name: Install pinned Rust toolchain
+        shell: bash
+        run: |
+          rustup toolchain install 1.99.0 --profile minimal --component rustfmt --component clippy
+          rustup target add "${{ matrix.target }}" --toolchain 1.99.0
+      - name: Cache Rust dependencies and build outputs
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/cargo-about*
+            target
+            !target/package
+            !target/tools
+          key: printmarten-${{ matrix.target }}-rust-1.99.0-${{ hashFiles('Cargo.lock', 'scripts/build_native.py', 'scripts/requirements.txt') }}
+          restore-keys: |
+            printmarten-${{ matrix.target }}-rust-1.99.0-
+      - name: Install packaging tools
+        run: python -m pip install -r scripts/requirements.txt
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Lint
+        run: cargo clippy --locked --all-targets -- -D warnings
+      - name: Build HEIC runtime (Unix)
+        if: runner.os != 'Windows'
+        run: python scripts/build_native.py
+      - name: Build HEIC runtime (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $vsPath = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          & "$vsPath\Common7\Tools\Launch-VsDevShell.ps1" -Arch amd64 -HostArch amd64 -SkipAutomaticLocation
+          python scripts/build_native.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Test
+        run: cargo test --locked --all-targets
+      - name: Build release
+        run: cargo build --release --locked
+      - name: Smoke check executable (Unix)
+        if: runner.os != 'Windows'
+        run: target/release/printmarten --version
+      - name: Smoke check executable (Windows)
+        if: runner.os == 'Windows'
+        run: target/release/printmarten.exe --version
+      - name: Generate dependency license texts
+        shell: bash
+        run: |
+          cargo install cargo-about --version 0.8.2 --locked
+          cargo about generate --locked packaging/licenses.hbs --output-file target/THIRD_PARTY_LICENSES.html
+      - name: Package (Unix)
+        if: runner.os != 'Windows'
+        run: python scripts/package.py --platform ${{ matrix.platform }} --arch ${{ matrix.arch }} --sha ${{ github.sha }}
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install nsis --version=3.11 -y --no-progress
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $vsPath = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          & "$vsPath\Common7\Tools\Launch-VsDevShell.ps1" -Arch amd64 -HostArch amd64 -SkipAutomaticLocation
+          python scripts/package.py --platform windows --arch x64 --sha ${{ github.sha }}
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Validate packages
+        run: python scripts/validate_packages.py --platform ${{ matrix.platform }} --arch ${{ matrix.arch }}
+      - name: Upload application packages
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: PrintMarten-${{ matrix.platform }}-${{ matrix.arch }}-${{ github.sha }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+      - name: Upload matching LGPL library sources
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: HEIC-sources-${{ matrix.platform }}-${{ matrix.arch }}-${{ github.sha }}
+          path: target/native-sources/*.tar.gz
+          if-no-files-found: error
+          retention-days: 30

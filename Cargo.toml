@@ -1,0 +1,36 @@
+[package]
+name = "printmarten"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.92"
+description = "Arrange photos at exact physical sizes and print them on shared sheets"
+license = "MIT"
+
+[dependencies]
+anyhow = "1.0"
+eframe = { version = "0.33", default-features = false, features = ["glow", "x11", "wayland", "default_fonts"] }
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp", "tiff", "bmp"] }
+lcms2 = { version = "6.1", features = ["static"] }
+libloading = "0.8"
+lopdf = { version = "0.38", default-features = false }
+rfd = "0.15"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tempfile = "3.0"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-foundation = { version = "0.3", features = ["NSData", "NSString", "NSGeometry"] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { version = "0.62", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_Graphics_Printing", "Win32_Storage_Xps", "Win32_UI_Controls_Dialogs", "Win32_UI_WindowsAndMessaging", "Win32_System_Memory", "Win32_System_Com"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+gtk4 = { version = "0.10", features = ["v4_14"] }
+
+[profile.release]
+lto = "thin"
+strip = "debuginfo"
+
+[build-dependencies]
+winresource = "0.1"

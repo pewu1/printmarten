@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=PrintMarten
+Comment=Arrange and print photos at exact sizes
+Exec=/opt/printmarten/printmarten %F
+Icon=printmarten
+Terminal=false
+Categories=Graphics;Photography;
+MimeType=image/jpeg;image/png;image/webp;image/tiff;image/bmp;image/heic;image/heif;
