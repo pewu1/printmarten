@@ -3,8 +3,6 @@
 Print photos at exact physical sizes, arrange several prints on shared sheets,
 and send them to your printer through the operating system's print dialog.
 
-Created by **Piotr Wenta**. [Project on GitHub](https://github.com/pewu1/printmarten).
-
 ## Features
 
 - Full-page prints and standard photo, passport/ID, wallet, or custom sizes.
