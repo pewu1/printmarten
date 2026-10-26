@@ -125,3 +125,43 @@ jobs:
           path: target/native-sources/*.tar.gz
           if-no-files-found: error
           retention-days: 30
+
+  release:
+    name: Publish downloads
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      actions: read
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Download packages and matching LGPL sources
+        run: |
+          gh run download "$GITHUB_RUN_ID" \
+            --pattern "PrintMarten-*-$GITHUB_SHA" \
+            --pattern "HEIC-sources-linux-x64-$GITHUB_SHA" \
+            --dir release-assets
+      - name: Publish release for this commit
+        run: |
+          tag="main-$GITHUB_SHA"
+          cat > release-notes.md <<EOF
+          Automated build of main at $GITHUB_SHA.
+
+          Downloads include macOS Intel and Apple Silicon DMGs, Windows x64 installer and portable ZIP, and Linux x64 DEB and tar.gz packages, with SHA-256 checksums.
+
+          The libheif and libde265 source archives match the LGPL libraries bundled in every platform package. Packages are not publisher-signed or notarized.
+
+          Build: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
+          EOF
+          if ! gh release view "$tag" > /dev/null 2>&1; then
+            gh release create "$tag" --target "$GITHUB_SHA" \
+              --title "PrintMarten main (${GITHUB_SHA:0:8})" \
+              --notes-file release-notes.md --prerelease --draft
+          fi
+          gh release upload "$tag" release-assets/*/* --clobber
+          gh release edit "$tag" --draft=false --prerelease --latest=false \
+            --notes-file release-notes.md

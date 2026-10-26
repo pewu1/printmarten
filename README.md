@@ -42,7 +42,9 @@ not confirmation that a physical sheet has finished printing.
 ## Downloads
 
 Every push to `main` runs [Build PrintMarten](../../actions/workflows/build.yml).
-Open a successful run and download the artifact for your platform:
+After all platform builds and package checks pass, the workflow publishes a
+prerelease for that commit in [GitHub Releases](../../releases). Open the newest
+prerelease and download the package for your platform from **Assets**:
 
 | Platform | Package | Installation |
 | --- | --- | --- |
@@ -53,10 +55,11 @@ Open a successful run and download the artifact for your platform:
 | Linux x64 | `PrintMarten-…-linux-x64-….deb` | Install with `sudo apt install ./PrintMarten-….deb` |
 | Linux x64 archive | `PrintMarten-…-linux-x64-….tar.gz` | Extract and run `./PrintMarten/printmarten`; system GTK dependencies are required |
 
-GitHub wraps workflow artifacts in a ZIP; extract that wrapper first. Packages
-include SHA-256 checksum files and are retained for 30 days. Matching LGPL
-library sources are uploaded as separate `HEIC-sources-…` artifacts.
-The workflow can also be started manually. It does not create GitHub Releases.
+Release assets include SHA-256 checksum files and matching LGPL library source
+archives. Downloads remain available in Releases beyond the 30-day workflow
+artifact retention period. Each commit uses a `main-<commit SHA>` release tag;
+rerunning a build updates the same release. The workflow can also be started
+manually; runs on `main` publish releases after the same checks pass.
 
 Packages are not publisher-signed or notarized. macOS bundles are ad-hoc signed
 for execution, including on Apple Silicon, and may require the system's
