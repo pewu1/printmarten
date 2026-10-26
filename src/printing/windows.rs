@@ -7,7 +7,7 @@ use ::windows::{
         System::{Com::*, Memory::*},
         UI::{Controls::Dialogs::*, WindowsAndMessaging::GetForegroundWindow},
     },
-    core::w,
+    core::{PCWSTR, PWSTR, w},
 };
 use std::mem::{size_of, zeroed};
 
@@ -36,6 +36,65 @@ impl Drop for Session {
 }
 fn um(value: i32, dpi: i32) -> i64 {
     (value as f64 * 25400.0 / dpi as f64).round() as i64
+}
+
+fn select_borderless_paper(dialog: &PRINTDLGEXW, mode: *mut DEVMODEW, size: Size) {
+    unsafe {
+        let names = GlobalLock(dialog.hDevNames) as *const DEVNAMES;
+        if names.is_null() {
+            return;
+        }
+        let base = names.cast::<u16>();
+        let device = PCWSTR(base.add((*names).wDeviceOffset as usize));
+        let port = PCWSTR(base.add((*names).wOutputOffset as usize));
+        let count = DeviceCapabilitiesW(device, port, DC_PAPERS, None, Some(mode));
+        if (1..=1024).contains(&count) {
+            let mut ids = vec![0_u16; count as usize];
+            let mut sizes = vec![POINT::default(); count as usize];
+            if DeviceCapabilitiesW(
+                device,
+                port,
+                DC_PAPERS,
+                Some(PWSTR(ids.as_mut_ptr())),
+                Some(mode),
+            ) == count
+                && DeviceCapabilitiesW(
+                    device,
+                    port,
+                    DC_PAPERSIZE,
+                    Some(PWSTR(sizes.as_mut_ptr().cast())),
+                    Some(mode),
+                ) == count
+            {
+                let original = *mode;
+                for (id, paper) in ids.into_iter().zip(sizes) {
+                    if (i64::from(paper.x) * 100 - size.w).abs() > 100
+                        || (i64::from(paper.y) * 100 - size.h).abs() > 100
+                    {
+                        continue;
+                    }
+                    (*mode).dmFields &= !(DM_FORMNAME | DM_PAPERWIDTH | DM_PAPERLENGTH);
+                    (*mode).dmFields |= DM_PAPERSIZE;
+                    (*mode).Anonymous1.Anonymous1.dmPaperSize = id as i16;
+                    let dc = CreateDCW(w!("WINSPOOL"), device, None, Some(mode));
+                    if !dc.is_invalid() {
+                        let borderless = GetDeviceCaps(Some(dc), PHYSICALOFFSETX) <= 0
+                            && GetDeviceCaps(Some(dc), PHYSICALOFFSETY) <= 0
+                            && GetDeviceCaps(Some(dc), HORZRES)
+                                >= GetDeviceCaps(Some(dc), PHYSICALWIDTH)
+                            && GetDeviceCaps(Some(dc), VERTRES)
+                                >= GetDeviceCaps(Some(dc), PHYSICALHEIGHT);
+                        let _ = DeleteDC(dc);
+                        if borderless {
+                            break;
+                        }
+                    }
+                    *mode = original;
+                }
+            }
+        }
+        let _ = GlobalUnlock(dialog.hDevNames);
+    }
 }
 pub fn prepare(settings: &Settings, pages: usize) -> Result<Option<Prepared>> {
     unsafe {
@@ -88,6 +147,13 @@ pub fn prepare(settings: &Settings, pages: usize) -> Result<Option<Prepared>> {
             DMORIENT_PORTRAIT as i16
         };
         (*mode).Anonymous1.Anonymous1.dmScale = 100;
+        if settings.photo_paper {
+            (*mode).dmFields |= DM_MEDIATYPE;
+            (*mode).dmMediaType = DMMEDIA_GLOSSY;
+        }
+        if settings.borderless {
+            select_borderless_paper(&session.dialog, mode, s);
+        }
         let _ = GlobalUnlock(session.dialog.hDevMode);
         let mut ranges = vec![PRINTPAGERANGE::default(); 64];
         session.dialog.Flags =
@@ -148,8 +214,8 @@ pub fn prepare(settings: &Settings, pages: usize) -> Result<Option<Prepared>> {
                 h: um(h, dy),
             },
             hardware: Insets {
-                left: um(x, dx),
-                top: um(y, dy),
+                left: um(x, dx).max(0),
+                top: um(y, dy).max(0),
                 right: um(w - x - rw, dx).max(0),
                 bottom: um(h - y - rh, dy).max(0),
             },

@@ -6,9 +6,68 @@ use objc2::{
     runtime::{AnyClass, AnyObject},
 };
 use objc2_foundation::{NSData, NSRect, NSSize, NSString};
+use std::ffi::c_void;
 
 #[link(name = "AppKit", kind = "framework")]
 unsafe extern "C" {}
+
+#[repr(C)]
+#[derive(Default)]
+struct PaperMargins {
+    top: f64,
+    left: f64,
+    bottom: f64,
+    right: f64,
+}
+
+#[link(name = "ApplicationServices", kind = "framework")]
+unsafe extern "C" {
+    fn PMSessionGetCurrentPrinter(session: *mut c_void, printer: *mut *mut c_void) -> i32;
+    fn PMPrinterGetPaperList(printer: *mut c_void, papers: *mut *mut AnyObject) -> i32;
+    fn PMPaperGetWidth(paper: *mut c_void, width: *mut f64) -> i32;
+    fn PMPaperGetHeight(paper: *mut c_void, height: *mut f64) -> i32;
+    fn PMPaperGetMargins(paper: *mut c_void, margins: *mut PaperMargins) -> i32;
+    fn PMPaperGetPPDPaperName(paper: *mut c_void, name: *mut *mut NSString) -> i32;
+}
+
+// Choose a real, zero-margin paper advertised by the current printer. Setting
+// application margins to zero alone does not turn on a driver's borderless mode.
+fn select_borderless_paper(info: &AnyObject, size: Size) {
+    unsafe {
+        let session: *mut c_void = msg_send![info, PMPrintSession];
+        let mut printer = std::ptr::null_mut();
+        let mut papers = std::ptr::null_mut();
+        if PMSessionGetCurrentPrinter(session, &mut printer) != 0
+            || printer.is_null()
+            || PMPrinterGetPaperList(printer, &mut papers) != 0
+            || papers.is_null()
+        {
+            return;
+        }
+        let count: usize = msg_send![papers, count];
+        for index in 0..count {
+            let paper: *mut c_void = msg_send![papers, objectAtIndex:index];
+            let (mut width, mut height) = (0.0, 0.0);
+            let mut margins = PaperMargins::default();
+            if PMPaperGetWidth(paper, &mut width) != 0
+                || PMPaperGetHeight(paper, &mut height) != 0
+                || PMPaperGetMargins(paper, &mut margins) != 0
+                || (um(width) - size.w).abs() > 100
+                || (um(height) - size.h).abs() > 100
+                || [margins.top, margins.left, margins.bottom, margins.right]
+                    .iter()
+                    .any(|margin| *margin > 0.0)
+            {
+                continue;
+            }
+            let mut name = std::ptr::null_mut();
+            if PMPaperGetPPDPaperName(paper, &mut name) == 0 && !name.is_null() {
+                let _: () = msg_send![info, setPaperName:&*name];
+                return;
+            }
+        }
+    }
+}
 #[link(name = "PDFKit", kind = "framework")]
 unsafe extern "C" {}
 
@@ -40,6 +99,9 @@ pub fn prepare(settings: &Settings, _pages: usize) -> Result<Option<Prepared>> {
             canonical.h as f64 * 72.0 / 25400.0,
         );
         let _: () = msg_send![&*info,setPaperSize:size];
+        if settings.borderless {
+            select_borderless_paper(&info, canonical);
+        }
         let _: () = msg_send![&*info,setOrientation:if landscape {1_usize}else{0_usize}];
         let panel: *mut AnyObject = msg_send![class(c"NSPrintPanel")?, printPanel];
         // The app owns the sheet preview; the panel edits copies, page ranges,

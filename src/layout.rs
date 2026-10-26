@@ -88,13 +88,40 @@ fn occupy(free: &mut Vec<Rect>, used: Rect) {
 }
 
 pub fn arrange(photos: &[Photo], settings: &Settings, hardware: Insets) -> Layout {
-    let margins = hardware.max(Insets::uniform(settings.margin.max(0)));
+    let margins = hardware.max(Insets::uniform(settings.layout_margin()));
     let area = Rect {
         x: margins.left,
         y: margins.top,
         w: settings.paper.w - margins.left - margins.right,
         h: settings.paper.h - margins.top - margins.bottom,
     };
+    if settings.full_page {
+        return Layout {
+            paper: settings.paper,
+            pages: if settings.paper.valid() && area.w > 0 && area.h > 0 {
+                photos
+                    .iter()
+                    .map(|photo| Page {
+                        photos: vec![Placement {
+                            photo_id: photo.id,
+                            source: photo.source,
+                            rect: area,
+                            rotated: false,
+                            fit: Fit::Fill,
+                        }],
+                    })
+                    .collect()
+            } else {
+                vec![]
+            },
+            rejected: if settings.paper.valid() && area.w > 0 && area.h > 0 {
+                vec![]
+            } else {
+                photos.iter().map(|photo| photo.id).collect()
+            },
+            cut_lines: false,
+        };
+    }
     let mut best: Option<Layout> = None;
     // Different sorts and scoring rules improve mixed-size layouts without unstable randomization.
     for sort in 0..3 {
@@ -247,6 +274,72 @@ pub fn image_geometry(image: (u32, u32), target: (f64, f64), fit: Fit) -> ([f32;
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn full_page_crops_each_photo_to_the_sheet_and_keeps_custom_sizes() {
+        let photos = vec![
+            Photo {
+                id: 1,
+                source: 0,
+                override_size: Some(Size::mm(30, 40)),
+                fit: Fit::Contain,
+            },
+            Photo {
+                id: 2,
+                source: 0,
+                override_size: None,
+                fit: Fit::Fill,
+            },
+        ];
+        for paper in [Size::mm(100, 150), Size::mm(150, 100)] {
+            let mut settings = Settings {
+                paper,
+                full_page: true,
+                borderless: true,
+                cut_lines: true,
+                ..Settings::default()
+            };
+            let layout = arrange(&photos, &settings, Insets::default());
+            assert_eq!(layout.pages.len(), 2);
+            assert!(layout.rejected.is_empty());
+            assert!(!layout.cut_lines);
+            for (page, photo) in layout.pages.iter().zip(&photos) {
+                assert_eq!(page.photos.len(), 1);
+                assert_eq!(page.photos[0].photo_id, photo.id);
+                assert_eq!(
+                    page.photos[0].rect,
+                    Rect {
+                        x: 0,
+                        y: 0,
+                        w: paper.w,
+                        h: paper.h
+                    }
+                );
+                assert_eq!(page.photos[0].fit, Fit::Fill);
+            }
+            settings.full_page = false;
+            let packed = arrange(&photos, &settings, Insets::default());
+            let customized = packed
+                .pages
+                .iter()
+                .flat_map(|page| &page.photos)
+                .find(|p| p.photo_id == 1)
+                .unwrap();
+            assert_eq!(customized.rect.w * customized.rect.h, 30000 * 40000);
+            assert_eq!(customized.fit, Fit::Contain);
+            settings.full_page = true;
+            settings.borderless = false;
+            let bordered = arrange(&photos, &settings, Insets::uniform(7000));
+            assert_eq!(
+                bordered.pages[0].photos[0].rect,
+                Rect {
+                    x: 7000,
+                    y: 7000,
+                    w: paper.w - 14000,
+                    h: paper.h - 14000
+                }
+            );
+        }
+    }
     fn photos(n: u64, size: Option<Size>) -> Vec<Photo> {
         (0..n)
             .map(|id| Photo {

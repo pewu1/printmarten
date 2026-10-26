@@ -9,6 +9,7 @@
 - Printer geometry reconciliation, conflicting scaling, invalid paper, and empty jobs.
 - UI state transitions for selections, copies, removal, and size resets.
 - Workflow syntax and package structure, checksums, architecture, and executable smoke checks.
+- Photo-paper borderless defaults, full-page portrait/landscape layouts, preserved custom sizes, rejection of non-borderless printer geometry, and edge-to-edge PDF/raster coverage.
 
 ## Manual acceptance checklist (each target)
 
@@ -26,10 +27,13 @@ Targets: macOS Intel, macOS Apple Silicon, Windows x64, Linux x64 on X11 and Way
 10. Print a physical sample at 100% with driver enlargement disabled; measure requested 100 × 150 mm rectangles and inspect image quality.
 11. Exercise missing/offline printers, no default printer, unsupported paper, and submission failure; verify the job is retained.
 12. Verify installer uninstall behavior and portable execution where applicable.
+13. Select 10 × 15 cm / 4 × 6 in paper and verify Photo paper and Borderless start enabled. For A4 photo stock, enable Photo paper explicitly. Verify Borderless can be turned off and normal margins return.
+14. Enable Full page with mixed image shapes and customized photo sizes. Verify one cropped photo per sheet, no cut lines, and coverage to every page edge. Switch orientation and paper size in both the app and print dialog; review any changed layout. Turn Full page off and verify custom sizes/crop choices return.
+15. On a borderless-capable printer, check the initial borderless paper selection for the default printer, then switch printers and explicitly select a borderless mode if required. Print and measure an edge-to-edge photo. Check a printer/paper combination without borderless support: it must report unprintable margins and require settings changes rather than silently clip the job.
 
 ## Local results (2026-10-26)
 
-- Intel macOS: all 15 tests pass, including the real libheif HEIC fixture, headless preview, PDF measurements, and raster placement.
+- Intel macOS: all 19 tests pass, including the real libheif HEIC fixture, headless preview, PDF measurements, raster placement, photo-paper defaults, and full-page borderless output.
 - Formatting and strict Clippy checks pass. Workflow syntax passes actionlint; packaging scripts pass Python syntax checks.
 - The complete application passes an Apple Silicon `cargo check`. This is a cross-compile check, not execution on Apple Silicon.
 - The actual Windows adapter passes strict Clippy/type checks for the MSVC target using a compile-only harness. No Windows executable has been run locally.

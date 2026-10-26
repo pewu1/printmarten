@@ -44,6 +44,12 @@ pub fn reconcile(photos: &[Photo], settings: &Settings, geometry: &Geometry) -> 
     );
     let mut settings = settings.clone();
     settings.paper = geometry.paper;
+    if settings.borderless {
+        anyhow::ensure!(
+            geometry.hardware == Insets::default(),
+            "The selected printer settings have unprintable margins. Choose a borderless paper size or enable borderless in the printer properties, then try again. You can also turn off Borderless in PrintMarten."
+        );
+    }
     let result = arrange(photos, &settings, geometry.hardware);
     anyhow::ensure!(
         result.rejected.is_empty(),
@@ -65,6 +71,39 @@ pub fn helper() -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn borderless_requires_driver_support_and_reflows_to_final_paper_size() {
+        let settings = Settings {
+            full_page: true,
+            borderless: true,
+            ..Settings::default()
+        };
+        let photos = [Photo {
+            id: 1,
+            source: 0,
+            override_size: None,
+            fit: Fit::Fill,
+        }];
+        let mut geometry = Geometry {
+            paper: Size::mm(100, 150),
+            hardware: Insets::default(),
+            scale_percent: 100.0,
+            pages_per_sheet: 1,
+        };
+        let layout = reconcile(&photos, &settings, &geometry).unwrap();
+        let rect = layout.pages[0].photos[0].rect;
+        assert_eq!((rect.x, rect.y, rect.w, rect.h), (0, 0, 100000, 150000));
+        geometry.hardware.right = 3000;
+        assert!(
+            reconcile(&photos, &settings, &geometry)
+                .unwrap_err()
+                .to_string()
+                .contains("borderless")
+        );
+        geometry.hardware = Insets::default();
+        geometry.scale_percent = 97.0;
+        assert!(reconcile(&photos, &settings, &geometry).is_err());
+    }
     #[test]
     fn driver_changes_repack_without_resizing_and_reject_conflicting_scale() {
         let photos = vec![

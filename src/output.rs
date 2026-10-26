@@ -199,6 +199,48 @@ fn paint_photo(page: &mut RgbImage, source: &Source, p: &Placement, scale: f64) 
 mod tests {
     use super::*;
     #[test]
+    fn borderless_full_page_raster_and_pdf_cover_every_edge() {
+        let sources = [Source {
+            path: "full-page".into(),
+            pixels: std::sync::Arc::new(RgbImage::from_pixel(40, 20, Rgb([255, 0, 0]))),
+        }];
+        let settings = Settings {
+            paper: Size::mm(100, 150),
+            full_page: true,
+            borderless: true,
+            ..Settings::default()
+        };
+        let layout = crate::layout::arrange(
+            &[Photo {
+                id: 1,
+                source: 0,
+                override_size: None,
+                fit: Fit::Contain,
+            }],
+            &settings,
+            Insets::default(),
+        );
+        let raster = raster_page(&layout, 0, &sources, 25.4).unwrap();
+        for (x, y) in [(0, 0), (99, 0), (0, 149), (99, 149), (50, 75)] {
+            assert_eq!(raster.get_pixel(x, y).0, [255, 0, 0]);
+        }
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("borderless.pdf");
+        write_pdf(&layout, &sources, &path).unwrap();
+        let doc = Document::load(path).unwrap();
+        let id = *doc.get_pages().values().next().unwrap();
+        let content = Content::decode(&doc.get_page_content(id).unwrap()).unwrap();
+        let clip = content
+            .operations
+            .iter()
+            .find(|op| op.operator == "re")
+            .unwrap();
+        assert_eq!(clip.operands[0].as_float().unwrap(), 0.0);
+        assert_eq!(clip.operands[1].as_float().unwrap(), 0.0);
+        assert!((clip.operands[2].as_float().unwrap() - 100000.0 * 72.0 / 25400.0).abs() < 0.001);
+        assert!((clip.operands[3].as_float().unwrap() - 150000.0 * 72.0 / 25400.0).abs() < 0.001);
+    }
+    #[test]
     fn raster_places_crop_and_contain_at_physical_coordinates() {
         let mut pixels = RgbImage::from_pixel(4, 4, Rgb([255, 0, 0]));
         for y in 2..4 {

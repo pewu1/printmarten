@@ -16,7 +16,25 @@ and print through your operating system's printer dialog.
    size and orientation. If printer settings change the arrangement, inspect
    the updated sheets and choose **Print reviewed layout**.
 
-Individual size overrides survive changes to the default size. Copies share
+For full-page photos, select your sheet size and enable **Full page · one photo
+per sheet**. Each photo is cropped to fill one sheet; turn this off to return to
+your saved individual sizes and crop/fit choices. Full-page mode omits cut lines.
+Enable **Borderless** for edge-to-edge output; with it off, application and
+printer margins still apply.
+Choose **Photo paper** for photo stock, including A4 or custom sizes. It enables
+**Borderless** by default; selecting a photo-paper size such as 10 × 15 cm or
+4 × 6 in also enables it. You can turn borderless off or enable it for other
+paper. Borderless uses zero application margins and keeps your normal margin
+value for when borderless is off.
+
+The print dialog starts with a matching borderless paper option when the default
+printer exposes one. If necessary, select the printer's borderless paper size or
+mode in its properties, along with the appropriate photo media type. The selected
+printer settings must report zero unprintable margins for borderless printing;
+otherwise PrintMarten asks you to change the settings. Printer support depends
+on the selected paper size and media type.
+
+In the usual packed-sheet mode, individual size overrides survive changes to the default size. Copies share
 image data but can be resized independently. Automatic packing can reorder
 photos and rotate them 90°; it never shrinks the requested photo size.
 Photos that cannot fit are listed and prevent printing. The packing algorithm

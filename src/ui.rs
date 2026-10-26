@@ -291,7 +291,8 @@ impl App {
                 for &(name, size) in PAPER_PRESETS {
                     if ui.selectable_label(current == name, name).clicked() {
                         let landscape = self.settings.paper.w > self.settings.paper.h;
-                        self.settings.paper = if landscape { size.rotated() } else { size };
+                        self.settings
+                            .select_paper(if landscape { size.rotated() } else { size });
                         self.dirty = true;
                     }
                 }
@@ -311,29 +312,57 @@ impl App {
                 self.dirty = true;
             }
         });
+        let mut photo_paper = self.settings.photo_paper;
+        if ui.checkbox(&mut photo_paper, "Photo paper").changed() {
+            self.settings.set_photo_paper(photo_paper);
+            self.dirty = true;
+        }
+        if ui
+            .checkbox(&mut self.settings.borderless, "Borderless")
+            .changed()
+        {
+            self.dirty = true;
+        }
+        if self.settings.borderless {
+            ui.small("Choose a borderless paper size or mode in the print dialog if needed.");
+        }
+        if ui
+            .checkbox(
+                &mut self.settings.full_page,
+                "Full page · one photo per sheet",
+            )
+            .changed()
+        {
+            self.dirty = true;
+        }
+        if self.settings.full_page {
+            ui.small("Photos are cropped to fill the sheet. Individual sizes are kept for when full page is off.");
+        }
         ui.add_space(12.0);
-        ui.heading("Default photo size");
-        let current = PHOTO_PRESETS
-            .iter()
-            .find(|(_, s)| *s == self.settings.default_size)
-            .map(|(n, _)| *n)
-            .unwrap_or("Custom");
-        egui::ComboBox::from_id_salt("size")
-            .selected_text(current)
-            .width(200.0)
-            .show_ui(ui, |ui| {
-                for &(name, size) in PHOTO_PRESETS {
-                    if ui.selectable_label(current == name, name).clicked() {
-                        self.settings.default_size = size;
-                        self.dirty = true;
+        ui.add_enabled_ui(!self.settings.full_page, |ui| {
+            ui.heading("Default photo size");
+            let current = PHOTO_PRESETS
+                .iter()
+                .find(|(_, s)| *s == self.settings.default_size)
+                .map(|(n, _)| *n)
+                .unwrap_or("Custom");
+            egui::ComboBox::from_id_salt("size")
+                .selected_text(current)
+                .width(200.0)
+                .show_ui(ui, |ui| {
+                    for &(name, size) in PHOTO_PRESETS {
+                        if ui.selectable_label(current == name, name).clicked() {
+                            self.settings.default_size = size;
+                            self.dirty = true;
+                        }
                     }
-                }
-                if ui.button("Custom size…").clicked() {
-                    self.start_edit(EditTarget::Default, self.settings.default_size);
-                }
-            });
-        ui.small(size_label(self.settings.default_size));
-        ui.small("Customized photos keep their own size.");
+                    if ui.button("Custom size…").clicked() {
+                        self.start_edit(EditTarget::Default, self.settings.default_size);
+                    }
+                });
+            ui.small(size_label(self.settings.default_size));
+            ui.small("Customized photos keep their own size.");
+        });
         ui.add_space(12.0);
         ui.heading("Spacing");
         let mut margin = self.settings.margin as f64 / 1000.0;
@@ -341,7 +370,8 @@ impl App {
         ui.horizontal(|ui| {
             ui.label("Margin");
             if ui
-                .add(
+                .add_enabled(
+                    !self.settings.borderless,
                     egui::DragValue::new(&mut margin)
                         .range(0.0..=100.0)
                         .speed(0.1)
@@ -356,7 +386,8 @@ impl App {
         ui.horizontal(|ui| {
             ui.label("Gap");
             if ui
-                .add(
+                .add_enabled(
+                    !self.settings.full_page,
                     egui::DragValue::new(&mut gap)
                         .range(0.0..=100.0)
                         .speed(0.1)
@@ -369,7 +400,10 @@ impl App {
             }
         });
         if ui
-            .checkbox(&mut self.settings.cut_lines, "Print cut lines")
+            .add_enabled(
+                !self.settings.full_page,
+                egui::Checkbox::new(&mut self.settings.cut_lines, "Print cut lines"),
+            )
             .changed()
         {
             self.dirty = true;
@@ -505,7 +539,7 @@ impl App {
                         .as_ref()
                         .map(|p| p.geometry.hardware)
                         .unwrap_or_default()
-                        .max(Insets::uniform(self.settings.margin));
+                        .max(Insets::uniform(self.settings.layout_margin()));
                     let printable = Rect::from_min_max(
                         sheet.min
                             + Vec2::new(hardware.left as f32 * scale, hardware.top as f32 * scale),
@@ -670,7 +704,7 @@ impl App {
             self.unit = editor.unit;
             match editor.target {
                 EditTarget::Default => self.settings.default_size = size,
-                EditTarget::Paper => self.settings.paper = size,
+                EditTarget::Paper => self.settings.select_paper(size),
                 EditTarget::Selection(ids) => {
                     for p in &mut self.photos {
                         if ids.contains(&p.id) {
@@ -794,7 +828,7 @@ impl eframe::App for App {
             })
         });
         egui::TopBottomPanel::bottom("status").show(ctx,|ui| {
-            ui.horizontal(|ui|{ui.label("Preview zoom");ui.add(egui::Slider::new(&mut self.zoom,0.3..=2.0).show_value(false));ui.small("Photo sizes stay exact regardless of preview zoom.");});
+            ui.horizontal(|ui|{ui.label("Preview zoom");ui.add(egui::Slider::new(&mut self.zoom,0.3..=2.0).show_value(false));ui.small(if self.settings.full_page { "One cropped photo fills each sheet." } else { "Photo sizes stay exact regardless of preview zoom." });});
             if !self.notice.is_empty(){ui.label(&self.notice);}
             if !self.layout.rejected.is_empty() {
                 ui.colored_label(Color32::DARK_RED,format!("{} photo(s) do not fit. Choose a larger sheet or a smaller photo size. Nothing will be shrunk.",self.layout.rejected.len()));
@@ -814,8 +848,12 @@ impl eframe::App for App {
         egui::SidePanel::left("controls")
             .exact_width(265.0)
             .show(ctx, |ui| {
-                self.controls(ui);
-                self.thumbnails(ui);
+                egui::ScrollArea::vertical()
+                    .id_salt("sheet-controls")
+                    .show(ui, |ui| {
+                        self.controls(ui);
+                        self.thumbnails(ui);
+                    });
             });
         if self.dirty {
             self.rebuild();

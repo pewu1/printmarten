@@ -190,6 +190,12 @@ impl Insets {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Settings {
     pub paper: Size,
+    #[serde(default)]
+    pub photo_paper: bool,
+    #[serde(default)]
+    pub borderless: bool,
+    #[serde(default)]
+    pub full_page: bool,
     pub default_size: Size,
     pub margin: Length,
     pub gap: Length,
@@ -199,6 +205,9 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             paper: Size::mm(210, 297),
+            photo_paper: false,
+            borderless: false,
+            full_page: false,
             default_size: Size::mm(100, 150),
             margin: 5000,
             gap: 2000,
@@ -207,9 +216,47 @@ impl Default for Settings {
     }
 }
 
+impl Settings {
+    pub fn set_photo_paper(&mut self, photo_paper: bool) {
+        self.photo_paper = photo_paper;
+        self.borderless = photo_paper;
+    }
+
+    pub fn select_paper(&mut self, paper: Size) {
+        self.paper = paper;
+        self.set_photo_paper(
+            PHOTO_PRESETS
+                .iter()
+                .any(|(_, size)| *size == paper || size.rotated() == paper),
+        );
+    }
+
+    pub fn layout_margin(&self) -> Length {
+        if self.borderless {
+            0
+        } else {
+            self.margin.max(0)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn photo_paper_defaults_to_borderless_and_preserves_saved_margins() {
+        let mut settings = Settings::default();
+        settings.select_paper(Size::mm(150, 100));
+        assert!(settings.photo_paper && settings.borderless);
+        assert_eq!(settings.layout_margin(), 0);
+        settings.borderless = false;
+        assert_eq!(settings.layout_margin(), 5000);
+        settings.select_paper(Size::mm(210, 297));
+        assert!(!settings.photo_paper && !settings.borderless);
+        settings.set_photo_paper(true);
+        assert!(settings.borderless); // Photo stock can also be A4 or custom-sized.
+        assert_eq!(settings.margin, 5000);
+    }
     #[test]
     fn conversions_are_exact_and_accept_decimal_comma() {
         assert_eq!(Unit::Inch.parse("4").unwrap(), 101600);
