@@ -95,7 +95,9 @@ jobs:
       - name: Generate dependency license texts
         shell: bash
         run: |
-          cargo install cargo-about --version 0.8.2 --locked
+          if [[ "$(cargo about --version 2>/dev/null || true)" != "cargo-about 0.8.2" ]]; then
+            cargo install cargo-about --version 0.8.2 --locked --force
+          fi
           cargo about generate --locked packaging/licenses.hbs --output-file target/THIRD_PARTY_LICENSES.html
       - name: Package (Unix)
         if: runner.os != 'Windows'
