@@ -87,17 +87,21 @@ pub fn write_pdf(layout: &Layout, sources: &[Source], path: &Path) -> Result<()>
             ));
             ops.push(Operation::new("Do", vec![Object::Name(name.into_bytes())]));
             ops.push(Operation::new("Q", vec![]));
-            if layout.cut_lines {
-                ops.push(Operation::new("q", vec![]));
-                ops.push(Operation::new("w", vec![0.25.into()]));
-                ops.push(Operation::new("G", vec![0.into()]));
-                ops.push(Operation::new(
-                    "re",
-                    vec![x.into(), y.into(), w.into(), h.into()],
-                ));
-                ops.push(Operation::new("S", vec![]));
-                ops.push(Operation::new("Q", vec![]));
+        }
+        if !page.cut_lines.is_empty() {
+            ops.push(Operation::new("q", vec![]));
+            ops.push(Operation::new("w", vec![0.25.into()]));
+            ops.push(Operation::new("G", vec![0.into()]));
+            for line in &page.cut_lines {
+                for (operator, point) in [("m", line.start), ("l", line.end)] {
+                    ops.push(Operation::new(
+                        operator,
+                        vec![pt(point[0]).into(), pt(layout.paper.h - point[1]).into()],
+                    ));
+                }
             }
+            ops.push(Operation::new("S", vec![]));
+            ops.push(Operation::new("Q", vec![]));
         }
         let content = doc.add_object(Stream::new(
             dictionary! {},
@@ -138,27 +142,21 @@ pub fn raster_page(
     for p in &layout.pages[index].photos {
         let source = sources.get(p.source).context("Missing image source")?;
         paint_photo(&mut page, source, p, scale);
-        if layout.cut_lines {
-            let x = (p.rect.x as f64 * scale).round() as u32;
-            let y = (p.rect.y as f64 * scale).round() as u32;
-            let right = ((p.rect.x + p.rect.w) as f64 * scale).round() as u32;
-            let bottom = ((p.rect.y + p.rect.h) as f64 * scale).round() as u32;
-            let stroke = (dpi * 0.25 / 72.0).round().max(1.0) as u32;
-            for t in 0..stroke {
-                for xx in x..=right.min(width - 1) {
-                    for yy in [y.saturating_add(t), bottom.saturating_sub(t)] {
-                        if yy < height {
-                            page.put_pixel(xx, yy, Rgb([0, 0, 0]));
-                        }
-                    }
-                }
-                for yy in y..=bottom.min(height - 1) {
-                    for xx in [x.saturating_add(t), right.saturating_sub(t)] {
-                        if xx < width {
-                            page.put_pixel(xx, yy, Rgb([0, 0, 0]));
-                        }
-                    }
-                }
+    }
+    let stroke = (dpi * 0.25 / 72.0).round().max(1.0) as i64;
+    for line in &layout.pages[index].cut_lines {
+        let x0 = (line.start[0] as f64 * scale).round() as i64;
+        let y0 = (line.start[1] as f64 * scale).round() as i64;
+        let x1 = (line.end[0] as f64 * scale).round() as i64;
+        let y1 = (line.end[1] as f64 * scale).round() as i64;
+        let (left, top, right, bottom) = if y0 == y1 {
+            (x0, y0 - stroke / 2, x1, y0 + (stroke - 1) / 2)
+        } else {
+            (x0 - stroke / 2, y0, x0 + (stroke - 1) / 2, y1)
+        };
+        for y in top.max(0)..=bottom.min(height as i64 - 1) {
+            for x in left.max(0)..=right.min(width as i64 - 1) {
+                page.put_pixel(x as u32, y as u32, Rgb([0, 0, 0]));
             }
         }
     }
@@ -212,7 +210,7 @@ mod tests {
         }];
         let settings = Settings {
             paper: Size::mm(20, 40),
-            full_page: true,
+            default_size: PrintSize::FullPage,
             borderless: true,
             ..Settings::default()
         };
@@ -257,7 +255,7 @@ mod tests {
         }];
         let settings = Settings {
             paper: Size::mm(100, 150),
-            full_page: true,
+            default_size: PrintSize::FullPage,
             borderless: true,
             ..Settings::default()
         };
@@ -267,7 +265,7 @@ mod tests {
                 source: 0,
                 source_landscape: false,
                 override_size: None,
-                fit: Fit::Contain,
+                fit: Fit::Fill,
             }],
             &settings,
             Insets::default(),
@@ -292,6 +290,126 @@ mod tests {
         assert!((clip.operands[2].as_float().unwrap() - 100000.0 * 72.0 / 25400.0).abs() < 0.001);
         assert!((clip.operands[3].as_float().unwrap() - 150000.0 * 72.0 / 25400.0).abs() < 0.001);
     }
+    #[test]
+    fn full_page_contain_keeps_the_entire_image_with_white_space_in_raster_and_pdf() {
+        let sources = [Source {
+            path: "landscape".into(),
+            pixels: std::sync::Arc::new(RgbImage::from_pixel(40, 20, Rgb([255, 0, 0]))),
+        }];
+        let settings = Settings {
+            paper: Size::mm(100, 150),
+            crop_to_fill: false,
+            ..Settings::default()
+        };
+        let layout = crate::layout::arrange(
+            &[Photo {
+                id: 0,
+                source: 0,
+                source_landscape: true,
+                override_size: None,
+                fit: settings.default_fit(),
+            }],
+            &settings,
+            Insets::default(),
+        );
+        let raster = raster_page(&layout, 0, &sources, 25.4).unwrap();
+        assert_eq!(raster.get_pixel(0, 75).0, [255, 255, 255]);
+        assert_eq!(raster.get_pixel(99, 75).0, [255, 255, 255]);
+        assert_eq!(raster.get_pixel(50, 0).0, [255, 0, 0]);
+        assert_eq!(raster.get_pixel(50, 149).0, [255, 0, 0]);
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("contain.pdf");
+        write_pdf(&layout, &sources, &path).unwrap();
+        let doc = Document::load(path).unwrap();
+        let content = Content::decode(
+            &doc.get_page_content(*doc.get_pages().values().next().unwrap())
+                .unwrap(),
+        )
+        .unwrap();
+        let transform = content
+            .operations
+            .iter()
+            .find(|op| op.operator == "cm")
+            .unwrap();
+        let pt = |mm: f32| mm * 72.0 / 25.4;
+        assert!((transform.operands[0].as_float().unwrap() - pt(75.0)).abs() < 0.001);
+        assert!((transform.operands[3].as_float().unwrap() - pt(150.0)).abs() < 0.001);
+        assert!((transform.operands[4].as_float().unwrap() - pt(12.5)).abs() < 0.001);
+    }
+
+    #[test]
+    fn extended_guides_match_pdf_and_raster_and_are_drawn_after_photos() {
+        let sources = [Source {
+            path: "red".into(),
+            pixels: std::sync::Arc::new(RgbImage::from_pixel(20, 30, Rgb([255, 0, 0]))),
+        }];
+        let settings = Settings {
+            paper: Size::mm(50, 60),
+            cut_lines: true,
+            default_size: PrintSize::Fixed(Size::mm(20, 30)),
+            ..Settings::default()
+        };
+        let layout = crate::layout::arrange(
+            &[Photo {
+                id: 0,
+                source: 0,
+                source_landscape: false,
+                override_size: None,
+                fit: Fit::Fill,
+            }],
+            &settings,
+            Insets::default(),
+        );
+        let raster = raster_page(&layout, 0, &sources, 25.4).unwrap();
+        assert_eq!(raster.get_pixel(12, 15).0, [0, 0, 0]);
+        assert_eq!(raster.get_pixel(38, 15).0, [0, 0, 0]);
+        assert_eq!(raster.get_pixel(11, 15).0, [255, 255, 255]);
+        assert_eq!(raster.get_pixel(15, 12).0, [0, 0, 0]);
+        assert_eq!(raster.get_pixel(15, 48).0, [0, 0, 0]);
+        assert_eq!(raster.get_pixel(25, 30).0, [255, 0, 0]);
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("guides.pdf");
+        write_pdf(&layout, &sources, &path).unwrap();
+        let doc = Document::load(path).unwrap();
+        let content = Content::decode(
+            &doc.get_page_content(*doc.get_pages().values().next().unwrap())
+                .unwrap(),
+        )
+        .unwrap();
+        let operations = &content.operations;
+        let last_photo = operations
+            .iter()
+            .rposition(|op| op.operator == "Do")
+            .unwrap();
+        let first_line = operations.iter().position(|op| op.operator == "m").unwrap();
+        assert!(first_line > last_photo);
+        let points: Vec<_> = operations
+            .iter()
+            .filter(|op| op.operator == "m" || op.operator == "l")
+            .collect();
+        assert_eq!(points.len(), layout.pages[0].cut_lines.len() * 2);
+        for (pair, line) in points
+            .as_chunks::<2>()
+            .0
+            .iter()
+            .zip(&layout.pages[0].cut_lines)
+        {
+            for (operation, point) in pair.iter().zip([line.start, line.end]) {
+                assert!(
+                    (operation.operands[0].as_float().unwrap() - point[0] as f32 * 72.0 / 25400.0)
+                        .abs()
+                        < 0.001
+                );
+                assert!(
+                    (operation.operands[1].as_float().unwrap()
+                        - (layout.paper.h - point[1]) as f32 * 72.0 / 25400.0)
+                        .abs()
+                        < 0.001
+                );
+            }
+        }
+    }
+
     #[test]
     fn raster_places_crop_and_contain_at_physical_coordinates() {
         let mut pixels = RgbImage::from_pixel(4, 4, Rgb([255, 0, 0]));
@@ -320,9 +438,9 @@ mod tests {
             paper: Size::mm(40, 40),
             pages: vec![crate::layout::Page {
                 photos: vec![placement.clone()],
+                cut_lines: vec![],
             }],
             rejected: vec![],
-            cut_lines: false,
         };
         let image = raster_page(&layout, 0, &sources, 25.4).unwrap();
         assert_eq!(image.dimensions(), (40, 40));
@@ -339,6 +457,7 @@ mod tests {
     fn pdf_preserves_sheet_and_photo_measurements_and_vector_cut_lines() {
         let settings = Settings {
             cut_lines: true,
+            default_size: PrintSize::Fixed(Size::mm(100, 150)),
             ..Settings::default()
         };
         let layout = crate::layout::arrange(

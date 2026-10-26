@@ -4,11 +4,14 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.92"
 description = "Arrange photos at exact physical sizes and print them on shared sheets"
-license = "MIT"
+license = "GPL-3.0-only"
+authors = ["Piotr Wenta"]
+repository = "https://github.com/pewu1/printmarten"
 
 [dependencies]
 anyhow = "1.0"
 eframe = { version = "0.33", default-features = false, features = ["glow", "x11", "wayland", "default_fonts"] }
+egui_extras = { version = "0.33", default-features = false, features = ["svg"] }
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp", "tiff", "bmp"] }
 lcms2 = { version = "6.1", features = ["static"] }
 libloading = "0.8"

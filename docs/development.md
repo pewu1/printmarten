@@ -1,0 +1,96 @@
+# Developing PrintMarten
+
+Rust is pinned by `rust-toolchain.toml`; dependencies by `Cargo.lock`.
+
+```sh
+cargo run --locked
+cargo run --locked -- /path/to/photo.jpg /path/to/another.png
+cargo run --locked -- --version
+cargo fmt --all -- --check
+cargo clippy --locked --all-targets -- -D warnings
+cargo test --locked --all-targets
+```
+
+Linux also needs native development dependencies:
+
+```sh
+sudo apt install libgtk-4-dev libgl1-mesa-dev libegl1-mesa-dev libxkbcommon-dev \
+  libwayland-dev libx11-dev libxcb1-dev pkg-config dpkg-dev
+```
+
+Windows native dependencies require Visual Studio 2022's x64 C++ tools.
+macOS native dependencies require Xcode Command Line Tools.
+
+Build the HEIC runtime into the project (ordinary image imports and `--version`
+do not require it):
+
+```sh
+python3 -m venv target/tools
+# Windows: target/tools/Scripts/activate
+source target/tools/bin/activate
+python -m pip install -r scripts/requirements.txt
+python scripts/build_native.py
+```
+
+The script downloads SHA-256-verified sources and builds separate libheif and
+libde265 libraries without installing them system-wide. Development builds find
+`target/native/lib`; `PRINTMARTEN_NATIVE_LIB_DIR` overrides the lookup directory.
+On Windows, point that variable at `target/native/bin` if necessary. Source
+archives are cached in `target/native-sources`.
+
+To package locally after building native dependencies:
+
+```sh
+cargo build --release --locked
+cargo install cargo-about --version 0.8.2 --locked
+cargo about generate --locked packaging/licenses.hbs --output-file target/THIRD_PARTY_LICENSES.html
+python scripts/package.py --platform macos --arch x64 --sha local
+python scripts/validate_packages.py --platform macos --arch x64
+```
+
+Use `--platform windows --arch x64` or `--platform linux --arch x64` on their
+respective operating systems. Windows packaging also requires NSIS 3.11. Install the Microsoft Visual C++
+v14 x64 runtime separately for execution and package smoke checks; it is not
+redistributed inside GPL application packages. CI builds each architecture on a
+native runner, including separate Intel and Apple Silicon macOS runners.
+
+## Architecture and validation
+
+`model` holds physical units and photo instances; `layout` packs rectangles;
+`imaging` decodes and color-converts sources; `output` renders PDF and raster
+pages; `printing` retains platform print settings between selection and
+submission. macOS and Linux print full-resolution image XObjects with vector
+cut lines. Windows uses page rasters at 300 DPI through GDI. Preview uses the
+same placement, crop, rotation, and contain geometry.
+
+The Linux print dialog runs in a helper process to keep GTK's main context
+separate from eframe/winit. It holds `GtkPrintSetup` while the user reviews any
+layout changes, then submits the generated PDF without reopening the dialog.
+
+Automated tests cover geometry, packing, sizes/copies, imports, PDF dimensions,
+and printer-setting reconciliation. CI also validates package structure,
+architecture, checksums, installation where supported, and headless execution.
+GUI dialogs, physical output, printer-specific paper substitution, unusual
+profiles/HDR HEIC files, and Linux desktop integration require manual validation
+on the actual target systems; compilation alone does not establish those results.
+
+See [validation.md](validation.md) for the manual checklist and recorded results.
+
+## Licensing and source releases
+
+PrintMarten is GPL-3.0-only. See [the dependency audit](license-audit.md) and
+[third-party notices](../THIRD_PARTY_NOTICES.md). Re-run cargo-about against the
+locked graph whenever dependencies change. The allowlist is not a substitute
+for reviewing license compatibility and bundled native components.
+
+After building the native libraries, generate complete corresponding source:
+
+```sh
+python scripts/package_source.py --sha local --offline
+```
+
+This packages the current source files, Cargo.lock, vendored Rust crates, native
+codec source archives, assets, and build/install scripts. CI publishes this archive
+with its checksum beside binary downloads. Keep it available for as long as the
+matching binaries are distributed. System SDKs and general-purpose build tools
+remain prerequisites.

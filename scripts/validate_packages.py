@@ -59,7 +59,9 @@ def main():
                 pe = struct.unpack_from("<I", data, 0x3C)[0]
                 assert data[pe:pe+4] == b"PE\0\0" and struct.unpack_from("<H", data, pe+4)[0] == 0x8664
                 assert list(binary.parent.glob("*heif*.dll"))
-                assert (binary.parent / "vcruntime140.dll").exists()
+                assert not list(binary.parent.glob("vcruntime*.dll"))
+                assert not list(binary.parent.glob("msvcp*.dll"))
+                assert not list(binary.parent.glob("concrt*.dll"))
                 smoke(binary)
         elif package.suffix == ".exe":
             subprocess.run([str(package), "/S"], check=True, timeout=120)

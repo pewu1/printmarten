@@ -1,177 +1,127 @@
 # PrintMarten
 
-Arrange photos at exact physical sizes, automatically pack them onto sheets,
-and print through your operating system's printer dialog.
+Print photos at exact physical sizes, arrange several prints on shared sheets,
+and send them to your printer through the operating system's print dialog.
 
-## Using PrintMarten
+Created by **Piotr Wenta**. [Project on GitHub](https://github.com/pewu1/printmarten).
 
-1. Choose **Add photos…**, **Add folder…**, or drag image files/folders into the
-   window. Folders include supported photos from subfolders, in filename order;
-   other file types and folder symlinks are skipped. Duplicate file paths within
-   one import are loaded once. Folder scanning and decoding run in the background.
-2. Select paper size/orientation and a default photo size. Custom sizes accept
-   centimeters, millimeters, or inches, including decimal-comma input.
-3. Click a photo in the sheet preview or thumbnail list. Ctrl/Cmd-click selects
-   several. Right-click for sizes, **Reset to default size**, **Crop to fill**,
-   **Fit whole image**, **Add one copy**, and **Remove**.
-4. Adjust **Min. margin** and **Min. gap**. Spare space is distributed evenly
-   around photos and between rows. Enable **Print cut lines** if wanted.
-5. Choose **Print…** and select a printer. The dialog starts with your paper
-   size and orientation. If printer settings change the arrangement, inspect
-   the updated sheets and choose **Print reviewed layout**.
+## Features
 
-For full-page photos, select your sheet size and enable **Full page · one photo
-per sheet**. Each photo is cropped to fill one sheet; turn this off to return to
-your saved individual sizes and crop/fit choices. Full-page mode omits cut lines.
-Enable **Borderless** for edge-to-edge output; with it off, application and
-printer margins still apply.
-Choose **Photo paper** for photo stock, including A4 or custom sizes. It enables
-**Borderless** by default; selecting a photo-paper size such as 10 × 15 cm or
-4 × 6 in also enables it. You can turn borderless off or enable it for other
-paper. Borderless uses zero application margins and keeps your normal margin
-value for when borderless is off.
+- Full-page prints and standard photo, passport/ID, wallet, or custom sizes.
+- Mixed jobs containing full-page sheets and smaller photos packed together.
+- Automatic placement that favors fewer sheets, then groups matching photo sizes.
+- Crop to fill or fit the complete image, with per-photo choices and independent copies.
+- Portrait/landscape sheets, photo-paper and borderless options, minimum margins/gaps, and extended cutting guides.
+- File/folder importing, drag-and-drop, sheet preview, zoom, and low-resolution warnings.
+- JPEG, PNG, WebP, TIFF, BMP, HEIC, and HEIF support. Image orientation metadata is applied; RGB color profiles are converted to sRGB and transparency is flattened onto white.
 
-The print dialog starts with a matching borderless paper option when the default
-printer exposes one. If necessary, select the printer's borderless paper size or
-mode in its properties, along with the appropriate photo media type. The selected
-printer settings must report zero unprintable margins for borderless printing;
-otherwise PrintMarten asks you to change the settings. Printer support depends
-on the selected paper size and media type.
+## Install
 
-Photo sizes include passport/ID formats (35 × 45 mm and 2 × 2 in), smaller ID
-formats, wallet prints, and additional standard photo sizes. Presets are available
-both as the default size and in each photo's **Print size** menu.
-
-In packed-sheet mode, individual size overrides survive changes to the default
-size. Copies share image data but can be resized independently. Photos and their
-print rectangles rotate 90° as needed so their long edge follows the sheet's
-long edge. Full-page mode uses the same image orientation rule. Physical print
-sizes are preserved; a photo that cannot fit in that orientation is rejected.
-Keeping long edges aligned can require more sheets than unrestricted rotation.
-The layout tries several deterministic row orders, then balances each row and
-the space between rows within the printable area. Margins and gaps are minimums;
-remaining space is shared equally, with differences of at most one micrometer
-from rounding. This does not guarantee a mathematically optimal packing.
-
-JPEG, PNG, WebP, TIFF, BMP, HEIC, and HEIF are supported. Orientation metadata is
-applied, RGB ICC profiles are converted to sRGB, and transparency is flattened
-onto white. HEIF decoding uses the primary still image; RAW, animation, and
-multi-frame editing are outside this version. Large images are limited during
-decoding and retained source pixels are capped at 1 GB per session. Images
-under 150 effective DPI show a quality warning. Jobs are session-only; closing
-the application discards the arrangement without changing source photos.
-
-Print at **100% scale**, with **one page per sheet** and driver enlargement /
-borderless expansion disabled to preserve dimensions. Hardware printer margins
-can reduce available space. Driver-specific enhancements can still affect the
-physical output, so measure a sample when dimensional accuracy is critical.
-Document copies in the system dialog duplicate the entire job; **Add one copy**
-duplicates individual photos. “Submitted” means accepted by the printing system,
-not confirmation that a physical sheet has finished printing.
-
-## Downloads
-
-Every push to `main` runs [Build PrintMarten](../../actions/workflows/build.yml).
-After all platform builds and package checks pass, the workflow publishes a
-prerelease for that commit in [GitHub Releases](../../releases). Open the newest
-prerelease and download the package for your platform from **Assets**:
+Download the latest package from [GitHub Releases](https://github.com/pewu1/printmarten/releases).
+Choose the package for your operating system and processor. Releases include SHA-256
+checksums and matching source archives.
 
 | Platform | Package | Installation |
 | --- | --- | --- |
-| macOS Intel | `PrintMarten-…-macos-x64-….dmg` | Open the DMG and drag PrintMarten to Applications |
-| macOS Apple Silicon | `PrintMarten-…-macos-arm64-….dmg` | Open the DMG and drag PrintMarten to Applications |
-| Windows x64 | `PrintMarten-…-windows-x64-…-setup.exe` | Run the per-user installer; no administrator access needed |
-| Windows x64 portable | `PrintMarten-…-windows-x64-…-portable.zip` | Extract the entire ZIP and run `printmarten.exe` |
-| Linux x64 | `PrintMarten-…-linux-x64-….deb` | Install with `sudo apt install ./PrintMarten-….deb` |
-| Linux x64 archive | `PrintMarten-…-linux-x64-….tar.gz` | Extract and run `./PrintMarten/printmarten`; system GTK dependencies are required |
-
-Release assets include SHA-256 checksum files and matching LGPL library source
-archives. Downloads remain available in Releases beyond the 30-day workflow
-artifact retention period. Each commit uses a `main-<commit SHA>` release tag;
-rerunning a build updates the same release. The workflow can also be started
-manually; runs on `main` publish releases after the same checks pass.
-
-Packages are not publisher-signed or notarized. macOS bundles are ad-hoc signed
-for execution, including on Apple Silicon, and may require the system's
-**Open Anyway** approval. Windows may display its unsigned-application prompt.
+| macOS Intel | `macos-x64` DMG | Open the DMG and drag PrintMarten to Applications. |
+| macOS Apple Silicon | `macos-arm64` DMG | Open the DMG and drag PrintMarten to Applications. |
+| Windows x64 | `windows-x64-setup.exe` | Install the runtime below, then run the per-user installer. |
+| Windows x64 portable | `windows-x64-portable.zip` | Install the runtime below, extract the entire ZIP, and launch `printmarten.exe`. |
+| Linux x64 | `linux-x64.deb` | Run `sudo apt install ./PrintMarten-….deb` using the downloaded filename. |
+| Linux x64 archive | `linux-x64.tar.gz` | Extract the archive and run `./PrintMarten/printmarten`. Install its GTK/system dependencies separately. |
 
 Intended minimum platforms: macOS 13, Windows 10/11 x64, and Ubuntu 24.04 x64
-or an equivalent distribution with GTK 4.14+ and configured system printing.
-The Linux archive is not a dependency-free AppImage.
+or an equivalent Linux distribution with GTK 4.14+ and configured printing.
+The Linux archive is not a standalone AppImage.
 
-## Development
+**Windows prerequisite:** install Microsoft's
+[Visual C++ v14 x64 Redistributable](https://aka.ms/vc14/vc_redist.x64.exe)
+separately. It is required by the application/native image libraries and is not
+bundled with PrintMarten. If Windows reports a missing `VCRUNTIME140.dll` or
+`MSVCP140.dll`, install or repair this runtime.
 
-Rust is pinned by `rust-toolchain.toml`; dependencies by `Cargo.lock`.
+Packages are not publisher-signed or notarized. macOS may require **Open Anyway**
+in Privacy & Security; Windows may show an unsigned-application prompt.
 
-```sh
-cargo run --locked
-cargo run --locked -- /path/to/photo.jpg /path/to/another.png
-cargo run --locked -- --version
-cargo fmt --all -- --check
-cargo clippy --locked --all-targets -- -D warnings
-cargo test --locked --all-targets
-```
+## Your first print
 
-Linux also needs native development dependencies:
+1. Choose **Add photos…** or **Add folder…**, or drop files/folders into the window.
+2. Select your sheet size and **Portrait** or **Landscape** orientation.
+3. Choose the default photo size. **Full page** starts selected and gives each photo its own sheet. Select a standard or custom size to pack smaller prints together.
+4. Review the preview. Right-click individual photos to choose their sizes, crop/fit behavior, copies, or removal.
+5. Choose **Print…** and select your printer and paper settings. If the printer changes the arrangement, review the updated sheets and choose **Print reviewed layout**.
 
-```sh
-sudo apt install libgtk-4-dev libgl1-mesa-dev libegl1-mesa-dev libxkbcommon-dev \
-  libwayland-dev libx11-dev libxcb1-dev pkg-config dpkg-dev
-```
+Start with one sample sheet when accurate physical dimensions matter. In the
+printer dialog, use **100% scale**, **one page per sheet**, and disable driver
+enlargement/borderless expansion. PrintMarten preserves requested dimensions;
+it does not shrink oversized photos to make them fit.
 
-Windows native dependencies require Visual Studio 2022's x64 C++ tools.
-macOS native dependencies require Xcode Command Line Tools.
+## Settings and options
 
-Build the HEIC runtime into the project (ordinary image imports and `--version`
-do not require it):
+| Option | What it does |
+| --- | --- |
+| Sheet size | A3, A4 (initial sheet), A5, A6, Letter, Legal, photo-paper presets, or custom dimensions. |
+| Orientation | Portrait or Landscape. Images and fixed-size print rectangles rotate as needed to align their long edge with the sheet. |
+| Photo paper | Starts checked. Selecting photo-paper stock enables Borderless; you can also use A4 or custom photo stock. Choosing an ordinary sheet preset resets the stock options. |
+| Borderless | Starts checked. Uses zero application margins and requires a printer/paper mode with zero unprintable margins. Turn it off for ordinary printers. |
+| Default photo size | Full page (initial choice), standard photo sizes, passport/ID and wallet sizes, or Custom size. Individual overrides survive default changes. |
+| Crop to fill | Starts checked. Crops around the image center to fill its print rectangle. Toggling applies to all current photos and future imports. Uncheck to keep the whole image with white space as needed. Individual right-click choices can override it afterward. |
+| Custom size | Enter width/height in centimeters, millimeters, or inches. Units are selected inside this dialog. Decimal points and decimal commas are accepted. |
+| Min. margin | Minimum application margin when Borderless is off. The printer's hardware margins can increase it. The saved value returns when Borderless is turned off. |
+| Min. gap | Minimum gap between smaller prints. Spare space is distributed evenly across rows and around the photos. |
+| Print cut lines | Draws edge guides extending up to 3 mm beyond photo corners, stopping at printable bounds or neighboring photos. Full-page sheets omit guides. |
+| Preview zoom | Changes the on-screen preview only; physical print sizes stay the same. |
 
-```sh
-python3 -m venv target/tools
-# Windows: target/tools/Scripts/activate
-source target/tools/bin/activate
-python -m pip install -r scripts/requirements.txt
-python scripts/build_native.py
-```
+Gap and cutting controls are disabled for jobs containing only full-page prints.
+Mixed jobs print full-page sheets first in import order, followed by packed
+smaller prints. Packing runs automatically after changes; it tries several
+arrangements and does not guarantee a mathematical optimum.
 
-The script downloads SHA-256-verified sources and builds separate libheif and
-libde265 libraries without installing them system-wide. Development builds find
-`target/native/lib`; `PRINTMARTEN_NATIVE_LIB_DIR` overrides the lookup directory.
-On Windows, point that variable at `target/native/bin` if necessary. Source
-archives are cached in `target/native-sources`.
+## Working with photos
 
-To package locally after building native dependencies:
+- Click a thumbnail or preview photo to select it. **Ctrl/Cmd-click** selects several; **Ctrl/Cmd+A** selects all.
+- Right-click for **Print size**, **Full page**, **Custom size…**, **Reset to default size**, **Crop to fill**, **Fit whole image**, **Add one copy**, and **Remove**.
+- Copies share the original image data but can have independent print sizes and crop/fit choices.
+- **Delete/Backspace** removes selected photos when you are not typing in a field.
+- **Clear job** removes all imported photos. It is disabled while importing.
+- Folder imports include supported photos in subfolders, in filename order. Other file types and folder symlinks are skipped. Duplicate paths within one import are loaded once; corrupt files are reported while valid photos continue loading.
+- **About** shows the application version, author, GitHub link, and GNU GPL v3 license.
 
-```sh
-cargo build --release --locked
-cargo install cargo-about --version 0.8.2 --locked
-cargo about generate --locked packaging/licenses.hbs --output-file target/THIRD_PARTY_LICENSES.html
-python scripts/package.py --platform macos --arch x64 --sha local
-python scripts/validate_packages.py --platform macos --arch x64
-```
+Jobs are session-only. Closing PrintMarten discards the arrangement and leaves
+source photos unchanged. RAW files, animation, and multi-frame editing are not
+supported; HEIF uses the primary still image.
 
-Use `--platform windows --arch x64` or `--platform linux --arch x64` on their
-respective operating systems. Windows packaging also requires NSIS 3.11 and an
-MSVC developer shell with `VCToolsRedistDir`. CI builds each architecture on a
-native runner, including separate Intel and Apple Silicon macOS runners.
+## Printing help
 
-## Architecture and validation
+**Borderless is rejected:** choose a borderless paper size/mode and matching
+photo media in the printer's settings, or turn off Borderless in PrintMarten.
+Support depends on both your printer and the selected paper.
 
-`model` holds physical units and photo instances; `layout` packs rectangles;
-`imaging` decodes and color-converts sources; `output` renders PDF and raster
-pages; `printing` retains platform print settings between selection and
-submission. macOS and Linux print full-resolution image XObjects with vector
-cut lines. Windows uses page rasters at 300 DPI through GDI. Preview uses the
-same placement, crop, rotation, and contain geometry.
+**A photo does not fit:** use a larger sheet or choose a smaller photo size.
+PrintMarten keeps the photo in the list and prevents printing until all prints fit.
+Long-edge alignment may require more sheets than unrestricted rotation.
 
-The Linux print dialog runs in a helper process to keep GTK's main context
-separate from eframe/winit. It holds `GtkPrintSetup` while the user reviews any
-layout changes, then submits the generated PDF without reopening the dialog.
+**A photo may look soft:** the warning means its effective resolution is below
+150 DPI at the requested print size. Use a higher-resolution source or a smaller print.
 
-Automated tests cover geometry, packing, sizes/copies, imports, PDF dimensions,
-and printer-setting reconciliation. CI also validates package structure,
-architecture, checksums, installation where supported, and headless execution.
-GUI dialogs, physical output, printer-specific paper substitution, unusual
-profiles/HDR HEIC files, and Linux desktop integration require manual validation
-on the actual target systems; compilation alone does not establish those results.
+**The print dialog changed the layout:** review the updated sheets before
+submitting. **Change printer…** lets you choose different printer settings.
+Document copies in the system dialog repeat the whole job; **Add one copy**
+duplicates an individual photo. “Submitted” means accepted by the printing
+system, rather than confirmation that a physical sheet has finished printing.
 
-See [docs/validation.md](docs/validation.md) for the manual checklist and recorded results.
+Very large images are limited during decoding, and retained source pixels are
+capped at 1 GB per session. Clear the job before importing more if this limit is reached.
+
+## License and source
+
+PrintMarten is licensed under **GNU GPL version 3 only (`GPL-3.0-only`)**.
+See [LICENSE](LICENSE). Third-party libraries, icons, and fonts retain their own
+licenses; see [third-party notices](THIRD_PARTY_NOTICES.md) and the packaged
+`THIRD_PARTY_LICENSES.html`.
+
+Each new release includes a corresponding-source archive with the application,
+locked Rust dependencies, native library sources, and build scripts. For building
+or contributing, see [developer instructions](docs/development.md). Dependency
+review details are in the [license audit](docs/license-audit.md), and platform
+validation is recorded in [validation notes](docs/validation.md).

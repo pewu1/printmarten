@@ -1,3 +1,4 @@
+use crate::ui_icons::{self, Icon};
 use eframe::egui::{self, Color32, Pos2, Rect, Stroke, StrokeKind, Vec2};
 use printmarten::{
     imaging::{self, Source},
@@ -13,7 +14,7 @@ use std::{
 };
 
 enum Action {
-    Size(Size),
+    Size(PrintSize),
     Custom,
     Reset,
     Fit(Fit),
@@ -65,14 +66,19 @@ pub struct App {
     notice: String,
     errors: Vec<String>,
     dirty: bool,
+    last_fixed_size: Size,
+    about_open: bool,
 }
 impl App {
     pub fn new(cc: &eframe::CreationContext<'_>, paths: Vec<PathBuf>) -> Self {
         Self::from_context(&cc.egui_ctx, paths)
     }
     fn from_context(context: &egui::Context, paths: Vec<PathBuf>) -> Self {
+        egui_extras::install_image_loaders(context);
         let mut style = (*context.style()).clone();
         style.spacing.item_spacing = Vec2::new(10.0, 8.0);
+        style.spacing.button_padding = Vec2::new(10.0, 6.0);
+        style.visuals.selection.bg_fill = Color32::from_rgb(218, 238, 248);
         context.set_style(style);
         context.set_visuals(egui::Visuals::light());
         let icon = printmarten::branding::icon(64);
@@ -132,6 +138,8 @@ impl App {
             notice: String::new(),
             errors: vec![],
             dirty: false,
+            last_fixed_size: Size::mm(100, 150),
+            about_open: false,
         };
         app.queue(paths);
         app
@@ -144,10 +152,14 @@ impl App {
     fn brand(&self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
             ui.add(
-                egui::Image::new((self.brand_icon.id(), Vec2::splat(32.0)))
+                egui::Image::new((self.brand_icon.id(), Vec2::splat(48.0)))
                     .alt_text("PrintMarten icon"),
             );
-            ui.heading(egui::RichText::new("PrintMarten").color(Color32::from_rgb(0, 115, 170)));
+            ui.heading(
+                egui::RichText::new("PrintMarten")
+                    .size(28.0)
+                    .color(Color32::from_rgb(0, 115, 170)),
+            );
         });
     }
     fn poll_import(&mut self, ctx: &egui::Context) {
@@ -194,7 +206,7 @@ impl App {
                         source: source_index,
                         source_landscape,
                         override_size: None,
-                        fit: Fit::Fill,
+                        fit: self.settings.default_fit(),
                     });
                     self.next_id += 1;
                     self.dirty = true;
@@ -223,7 +235,8 @@ impl App {
                 if let Some(p) = self.photos.iter().find(|p| self.selection.contains(&p.id)) {
                     self.start_edit(
                         EditTarget::Selection(self.selection.iter().copied().collect()),
-                        p.size(self.settings.default_size),
+                        p.size(self.settings.default_size)
+                            .fixed_or(self.last_fixed_size),
                     );
                 }
                 return;
@@ -275,36 +288,61 @@ impl App {
             egui::ScrollArea::vertical()
                 .max_height(300.0)
                 .show(ui, |ui| {
+                    if ui
+                        .add(ui_icons::button(ui, Icon::FullPage, "Full page"))
+                        .clicked()
+                    {
+                        result = Some(Action::Size(PrintSize::FullPage));
+                        ui.close();
+                    }
                     for &(name, size) in PHOTO_PRESETS {
                         if ui.button(name).clicked() {
-                            result = Some(Action::Size(size));
+                            result = Some(Action::Size(PrintSize::Fixed(size)));
                             ui.close();
                         }
                     }
                 });
-            if ui.button("Custom size…").clicked() {
+            if ui
+                .add(ui_icons::button(ui, Icon::Ruler, "Custom size…"))
+                .clicked()
+            {
                 result = Some(Action::Custom);
                 ui.close();
             }
-            if ui.button("Reset to default size").clicked() {
+            if ui
+                .add(ui_icons::button(ui, Icon::Reset, "Reset to default size"))
+                .clicked()
+            {
                 result = Some(Action::Reset);
                 ui.close();
             }
         });
-        if ui.button("Crop to fill").clicked() {
+        if ui
+            .add(ui_icons::button(ui, Icon::Crop, "Crop to fill"))
+            .clicked()
+        {
             result = Some(Action::Fit(Fit::Fill));
             ui.close();
         }
-        if ui.button("Fit whole image").clicked() {
+        if ui
+            .add(ui_icons::button(ui, Icon::FullPage, "Fit whole image"))
+            .clicked()
+        {
             result = Some(Action::Fit(Fit::Contain));
             ui.close();
         }
         ui.separator();
-        if ui.button("Add one copy").clicked() {
+        if ui
+            .add(ui_icons::button(ui, Icon::Copy, "Add one copy"))
+            .clicked()
+        {
             result = Some(Action::Copy);
             ui.close();
         }
-        if ui.button("Remove").clicked() {
+        if ui
+            .add(ui_icons::button(ui, Icon::Trash, "Remove"))
+            .clicked()
+        {
             result = Some(Action::Remove);
             ui.close();
         }
@@ -320,8 +358,206 @@ impl App {
             self.selection.insert(id);
         }
     }
+    fn set_crop_to_fill(&mut self, enabled: bool) {
+        self.settings.crop_to_fill = enabled;
+        let fit = self.settings.default_fit();
+        for photo in &mut self.photos {
+            photo.fit = fit;
+        }
+        self.dirty = true;
+    }
+    fn has_fixed_photos(&self) -> bool {
+        if self.photos.is_empty() {
+            matches!(self.settings.default_size, PrintSize::Fixed(_))
+        } else {
+            self.photos
+                .iter()
+                .any(|p| matches!(p.size(self.settings.default_size), PrintSize::Fixed(_)))
+        }
+    }
+    fn toolbar_actions(&mut self, ui: &mut egui::Ui) -> bool {
+        let mut print = false;
+        ui.horizontal(|ui| {
+            if ui
+                .add(ui_icons::button(ui, Icon::AddPhotos, "Add photos…"))
+                .clicked()
+                && let Some(paths) = rfd::FileDialog::new()
+                    .add_filter("Photos", importing::IMAGE_EXTENSIONS)
+                    .pick_files()
+            {
+                self.queue(paths);
+            }
+            if ui
+                .add(ui_icons::button(ui, Icon::AddFolder, "Add folder…"))
+                .clicked()
+                && let Some(paths) = rfd::FileDialog::new().pick_folders()
+            {
+                self.queue(paths);
+            }
+            if ui
+                .add_enabled(
+                    self.pending == 0 && !self.photos.is_empty(),
+                    ui_icons::button(ui, Icon::Trash, "Clear job"),
+                )
+                .clicked()
+            {
+                self.photos.clear();
+                self.sources.clear();
+                self.textures.clear();
+                self.selection.clear();
+                self.memory = 0;
+                self.dirty = true;
+            }
+            let label = if self.prepared.is_some() {
+                "Print reviewed layout"
+            } else {
+                "Print…"
+            };
+            let enabled = self.pending == 0
+                && !self.photos.is_empty()
+                && self.layout.rejected.is_empty()
+                && self.editor.is_none();
+            if ui
+                .add_enabled(
+                    enabled,
+                    ui_icons::button(ui, Icon::Print, label).fill(Color32::from_rgb(210, 235, 247)),
+                )
+                .clicked()
+            {
+                print = true;
+            }
+            if self.prepared.is_some()
+                && ui
+                    .add(ui_icons::button(ui, Icon::Print, "Change printer…"))
+                    .clicked()
+            {
+                self.prepared = None;
+                print = true;
+            }
+        });
+        print
+    }
+    fn toolbar(&mut self, ui: &mut egui::Ui) -> bool {
+        // Measure text in the active font so the action group can be centered
+        // independently of the branding and right-hand counts.
+        let mut labels = vec![
+            "Add photos…",
+            "Add folder…",
+            "Clear job",
+            if self.prepared.is_some() {
+                "Print reviewed layout"
+            } else {
+                "Print…"
+            },
+        ];
+        if self.prepared.is_some() {
+            labels.push("Change printer…");
+        }
+        let font = egui::TextStyle::Button.resolve(ui.style());
+        let action_width: f32 = labels
+            .iter()
+            .map(|label| {
+                ui.painter()
+                    .layout_no_wrap((*label).into(), font.clone(), Color32::BLACK)
+                    .size()
+                    .x
+                    + ui.spacing().button_padding.x * 2.0
+                    + 17.0_f32.min(ui.text_style_height(&egui::TextStyle::Button))
+                    + ui.spacing().icon_spacing
+            })
+            .sum::<f32>()
+            + ui.spacing().item_spacing.x * (labels.len() - 1) as f32;
+        let side = 245.0_f32.max(if self.pending > 0 { 290.0 } else { 245.0 });
+        let two_rows = ui.available_width() < action_width + side * 2.0 + 24.0;
+        let (header, _) =
+            ui.allocate_exact_size(Vec2::new(ui.available_width(), 56.0), egui::Sense::hover());
+        ui.scope_builder(
+            egui::UiBuilder::new()
+                .max_rect(Rect::from_min_size(header.min, Vec2::new(side, 56.0)))
+                .layout(egui::Layout::left_to_right(egui::Align::Center)),
+            |ui| self.brand(ui),
+        );
+        let right = Rect::from_min_max(Pos2::new(header.right() - side, header.top()), header.max);
+        ui.scope_builder(
+            egui::UiBuilder::new()
+                .max_rect(right)
+                .layout(egui::Layout::right_to_left(egui::Align::Center)),
+            |ui| {
+                if ui
+                    .add(ui_icons::button(ui, Icon::Info, "About"))
+                    .on_hover_text("About PrintMarten")
+                    .clicked()
+                {
+                    self.about_open = true;
+                }
+                ui.vertical(|ui| {
+                    ui.horizontal(|ui| {
+                        ui.add(Icon::Photos.image(ui.visuals().text_color()));
+                        ui.label(format!(
+                            "{} photos · {} sheets",
+                            self.photos.len(),
+                            self.layout.pages.len()
+                        ));
+                    });
+                    if self.pending > 0 {
+                        ui.horizontal(|ui| {
+                            ui.spinner();
+                            ui.small(format!("Importing {}…", self.pending));
+                        });
+                    }
+                });
+            },
+        );
+        let action_area = if two_rows {
+            ui.allocate_exact_size(Vec2::new(ui.available_width(), 44.0), egui::Sense::hover())
+                .0
+        } else {
+            header
+        };
+        let centered = Rect::from_center_size(
+            action_area.center(),
+            Vec2::new(action_width, action_area.height()),
+        );
+        ui.scope_builder(
+            egui::UiBuilder::new()
+                .max_rect(centered)
+                .layout(egui::Layout::left_to_right(egui::Align::Center)),
+            |ui| self.toolbar_actions(ui),
+        )
+        .inner
+    }
+    fn about(&mut self, ctx: &egui::Context) {
+        let mut open = self.about_open;
+        egui::Window::new("About PrintMarten")
+            .open(&mut open)
+            .collapsible(false)
+            .resizable(false)
+            .default_width(440.0)
+            .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
+            .show(ctx, |ui| {
+                self.brand(ui);
+                ui.label(format!("Version {}", env!("CARGO_PKG_VERSION")));
+                ui.label("Author: Piotr Wenta");
+                ui.horizontal(|ui| {
+                    ui.add(Icon::Link.image(ui.visuals().text_color()));
+                    ui.hyperlink_to("PrintMarten on GitHub", env!("CARGO_PKG_REPOSITORY"));
+                });
+                ui.separator();
+                ui.label("Licensed under GNU GPL v3 (GPL-3.0-only)");
+                egui::ScrollArea::vertical()
+                    .id_salt("about-license")
+                    .max_height(240.0)
+                    .show(ui, |ui| {
+                        ui.add(egui::Label::new(include_str!("../LICENSE")).wrap());
+                    });
+                if ui.add(ui_icons::button(ui, Icon::Close, "Close")).clicked() {
+                    self.about_open = false;
+                }
+            });
+        self.about_open &= open;
+    }
     fn controls(&mut self, ui: &mut egui::Ui) {
-        ui.heading("Sheet");
+        ui_icons::heading(ui, Icon::Sheet, "Sheet");
         let current = PAPER_PRESETS
             .iter()
             .find(|(_, s)| *s == self.settings.paper || s.rotated() == self.settings.paper)
@@ -339,18 +575,29 @@ impl App {
                         self.dirty = true;
                     }
                 }
-                if ui.button("Custom paper…").clicked() {
+                if ui
+                    .add(ui_icons::button(ui, Icon::Ruler, "Custom paper…"))
+                    .clicked()
+                {
                     self.start_edit(EditTarget::Paper, self.settings.paper);
                 }
             });
         ui.small(size_label(self.settings.paper));
         ui.horizontal(|ui| {
             let landscape = self.settings.paper.w > self.settings.paper.h;
-            if ui.selectable_label(!landscape, "Portrait").clicked() && landscape {
+            if ui
+                .add(ui_icons::button(ui, Icon::Portrait, "Portrait").selected(!landscape))
+                .clicked()
+                && landscape
+            {
                 self.settings.paper = self.settings.paper.rotated();
                 self.dirty = true;
             }
-            if ui.selectable_label(landscape, "Landscape").clicked() && !landscape {
+            if ui
+                .add(ui_icons::button(ui, Icon::Landscape, "Landscape").selected(landscape))
+                .clicked()
+                && !landscape
+            {
                 self.settings.paper = self.settings.paper.rotated();
                 self.dirty = true;
             }
@@ -369,45 +616,59 @@ impl App {
         if self.settings.borderless {
             ui.small("Choose a borderless paper size or mode in the print dialog if needed.");
         }
-        if ui
-            .checkbox(
-                &mut self.settings.full_page,
-                "Full page · one photo per sheet",
-            )
-            .changed()
-        {
-            self.dirty = true;
-        }
-        if self.settings.full_page {
-            ui.small("Photos are cropped to fill the sheet. Individual sizes are kept for when full page is off.");
-        }
         ui.add_space(12.0);
-        ui.add_enabled_ui(!self.settings.full_page, |ui| {
-            ui.heading("Default photo size");
-            let current = PHOTO_PRESETS
+        ui_icons::heading(ui, Icon::Photos, "Default photo size");
+        let current = match self.settings.default_size {
+            PrintSize::FullPage => "Full page",
+            PrintSize::Fixed(size) => PHOTO_PRESETS
                 .iter()
-                .find(|(_, s)| *s == self.settings.default_size)
-                .map(|(n, _)| *n)
-                .unwrap_or("Custom");
-            egui::ComboBox::from_id_salt("size")
-                .selected_text(current)
-                .width(200.0)
-                .show_ui(ui, |ui| {
-                    for &(name, size) in PHOTO_PRESETS {
-                        if ui.selectable_label(current == name, name).clicked() {
-                            self.settings.default_size = size;
-                            self.dirty = true;
-                        }
+                .find(|(_, preset)| *preset == size)
+                .map(|(name, _)| *name)
+                .unwrap_or("Custom"),
+        };
+        egui::ComboBox::from_id_salt("size")
+            .selected_text(current)
+            .width(220.0)
+            .show_ui(ui, |ui| {
+                if ui
+                    .selectable_label(
+                        self.settings.default_size == PrintSize::FullPage,
+                        "Full page",
+                    )
+                    .clicked()
+                {
+                    self.settings.default_size = PrintSize::FullPage;
+                    self.dirty = true;
+                }
+                for &(name, size) in PHOTO_PRESETS {
+                    if ui.selectable_label(current == name, name).clicked() {
+                        self.settings.default_size = PrintSize::Fixed(size);
+                        self.last_fixed_size = size;
+                        self.dirty = true;
                     }
-                    if ui.button("Custom size…").clicked() {
-                        self.start_edit(EditTarget::Default, self.settings.default_size);
-                    }
-                });
-            ui.small(size_label(self.settings.default_size));
-            ui.small("Customized photos keep their own size.");
-        });
+                }
+                if ui
+                    .add(ui_icons::button(ui, Icon::Ruler, "Custom size…"))
+                    .clicked()
+                {
+                    self.start_edit(
+                        EditTarget::Default,
+                        self.settings.default_size.fixed_or(self.last_fixed_size),
+                    );
+                }
+            });
+        ui.small(self.settings.default_size.label());
+        ui.small("Customized photos keep their own size.");
+        if self.settings.default_size == PrintSize::FullPage {
+            ui.small("One photo per sheet. Smaller overrides are packed together.");
+        }
+        let mut crop = self.settings.crop_to_fill;
+        if ui.checkbox(&mut crop, "Crop to fill").on_hover_text("Apply to all photos and future imports. Right-click a photo to change it individually.").changed() {
+            self.set_crop_to_fill(crop);
+        }
+        let packed = self.has_fixed_photos();
         ui.add_space(12.0);
-        ui.heading("Spacing");
+        ui_icons::heading(ui, Icon::Scissors, "Spacing");
         let mut margin = self.settings.margin as f64 / 1000.0;
         let mut gap = self.settings.gap as f64 / 1000.0;
         ui.horizontal(|ui| {
@@ -430,7 +691,7 @@ impl App {
             ui.label("Min. gap");
             if ui
                 .add_enabled(
-                    !self.settings.full_page,
+                    packed,
                     egui::DragValue::new(&mut gap)
                         .range(0.0..=100.0)
                         .speed(0.1)
@@ -445,33 +706,25 @@ impl App {
         ui.small("Extra space is shared evenly between photos and rows.");
         if ui
             .add_enabled(
-                !self.settings.full_page,
+                packed,
                 egui::Checkbox::new(&mut self.settings.cut_lines, "Print cut lines"),
             )
             .changed()
         {
             self.dirty = true;
         }
-        ui.add_space(8.0);
-        ui.horizontal(|ui| {
-            ui.label("Custom dimensions");
-            egui::ComboBox::from_id_salt("units")
-                .selected_text(self.unit.label())
-                .show_ui(ui, |ui| {
-                    for unit in Unit::ALL {
-                        ui.selectable_value(&mut self.unit, unit, unit.label());
-                    }
-                });
-        });
         ui.separator();
-        ui.heading(format!("Photos ({})", self.photos.len()));
+        ui_icons::heading(ui, Icon::Photos, &format!("Photos ({})", self.photos.len()));
         ui.small("Ctrl/Cmd-click to select several.\nRight-click a photo for sizes and copies.");
         if !self.selection.is_empty() {
             ui.horizontal(|ui| {
-                if ui.button("Copy").clicked() {
+                if ui.add(ui_icons::button(ui, Icon::Copy, "Copy")).clicked() {
                     self.action(Action::Copy);
                 }
-                if ui.button("Remove").clicked() {
+                if ui
+                    .add(ui_icons::button(ui, Icon::Trash, "Remove"))
+                    .clicked()
+                {
                     self.action(Action::Remove);
                 }
             });
@@ -486,41 +739,52 @@ impl App {
                 for photo in &self.photos {
                     let source = &self.sources[photo.source];
                     let selected = self.selection.contains(&photo.id);
-                    let response = ui
-                        .horizontal(|ui| {
-                            let size = egui::load::SizedTexture::new(
-                                self.textures[photo.source].normal.id(),
-                                Vec2::new(54.0, 54.0),
-                            );
-                            ui.add(egui::Image::new(size).fit_to_exact_size(Vec2::new(54.0, 54.0)));
-                            ui.vertical(|ui| {
-                                let label = source
-                                    .path
-                                    .file_name()
-                                    .unwrap_or_default()
-                                    .to_string_lossy();
-                                ui.add(egui::Label::new(label).truncate());
-                                ui.small(format!(
-                                    "{}{}",
-                                    size_label(photo.size(self.settings.default_size)),
-                                    if photo.override_size.is_some() {
-                                        " •"
-                                    } else {
-                                        ""
-                                    }
-                                ));
+                    let stroke = if selected {
+                        Stroke::new(2.0_f32, Color32::from_rgb(0, 130, 180))
+                    } else {
+                        Stroke::new(2.0_f32, Color32::TRANSPARENT)
+                    };
+                    let response = egui::Frame::new()
+                        .inner_margin(8.0)
+                        .corner_radius(6.0)
+                        .stroke(stroke)
+                        .fill(if selected {
+                            Color32::from_rgb(232, 245, 251)
+                        } else {
+                            Color32::TRANSPARENT
+                        })
+                        .show(ui, |ui| {
+                            let width = ui.available_width();
+                            ui.set_min_width(width);
+                            ui.horizontal(|ui| {
+                                ui.add(
+                                    egui::Image::new((
+                                        self.textures[photo.source].normal.id(),
+                                        Vec2::splat(54.0),
+                                    ))
+                                    .fit_to_exact_size(Vec2::splat(54.0)),
+                                );
+                                ui.vertical(|ui| {
+                                    let label = source
+                                        .path
+                                        .file_name()
+                                        .unwrap_or_default()
+                                        .to_string_lossy();
+                                    ui.add(egui::Label::new(label).truncate());
+                                    ui.small(format!(
+                                        "{}{}",
+                                        photo.size(self.settings.default_size).label(),
+                                        if photo.override_size.is_some() {
+                                            " •"
+                                        } else {
+                                            ""
+                                        }
+                                    ));
+                                });
                             });
                         })
                         .response
                         .interact(egui::Sense::click());
-                    if selected {
-                        ui.painter().rect_stroke(
-                            response.rect,
-                            4.0,
-                            Stroke::new(2.0_f32, Color32::from_rgb(0, 130, 180)),
-                            StrokeKind::Inside,
-                        );
-                    }
                     if response.clicked() {
                         select = Some((
                             photo.id,
@@ -628,14 +892,6 @@ impl App {
                             Rect::from_min_max(Pos2::new(uv[0], uv[1]), Pos2::new(uv[2], uv[3])),
                             Color32::WHITE,
                         );
-                        if self.layout.cut_lines {
-                            ui.painter().rect_stroke(
-                                target,
-                                0.0,
-                                Stroke::new(0.6_f32, Color32::BLACK),
-                                StrokeKind::Inside,
-                            );
-                        }
                         let selected = self.selection.contains(&p.photo_id);
                         if selected {
                             ui.painter().rect_stroke(
@@ -676,6 +932,23 @@ impl App {
                         response.context_menu(|ui| {
                             action = Self::context_menu(ui);
                         });
+                    }
+                    for line in &page.cut_lines {
+                        ui.painter().line_segment(
+                            [
+                                sheet.min
+                                    + Vec2::new(
+                                        line.start[0] as f32 * scale,
+                                        line.start[1] as f32 * scale,
+                                    ),
+                                sheet.min
+                                    + Vec2::new(
+                                        line.end[0] as f32 * scale,
+                                        line.end[1] as f32 * scale,
+                                    ),
+                            ],
+                            Stroke::new((0.25 * 25400.0 / 72.0 * scale).max(0.5), Color32::BLACK),
+                        );
                     }
                     ui.add_space(20.0);
                 }
@@ -730,7 +1003,7 @@ impl App {
                     ui.colored_label(Color32::DARK_RED, &editor.error);
                 }
                 ui.horizontal(|ui| {
-                    if ui.button("Apply").clicked() {
+                    if ui.add(ui_icons::button(ui, Icon::Check, "Apply")).clicked() {
                         match editor
                             .unit
                             .parse(&editor.width)
@@ -740,7 +1013,10 @@ impl App {
                             Err(error) => editor.error = error.to_string(),
                         }
                     }
-                    if ui.button("Cancel").clicked() {
+                    if ui
+                        .add(ui_icons::button(ui, Icon::Close, "Cancel"))
+                        .clicked()
+                    {
                         cancel = true;
                     }
                 });
@@ -749,12 +1025,15 @@ impl App {
             let editor = self.editor.take().unwrap();
             self.unit = editor.unit;
             match editor.target {
-                EditTarget::Default => self.settings.default_size = size,
+                EditTarget::Default => {
+                    self.settings.default_size = PrintSize::Fixed(size);
+                    self.last_fixed_size = size;
+                }
                 EditTarget::Paper => self.settings.select_paper(size),
                 EditTarget::Selection(ids) => {
                     for p in &mut self.photos {
                         if ids.contains(&p.id) {
-                            p.override_size = Some(size);
+                            p.override_size = Some(PrintSize::Fixed(size));
                         }
                     }
                 }
@@ -812,72 +1091,16 @@ impl eframe::App for App {
         }
         let mut print = false;
         egui::TopBottomPanel::top("toolbar").show(ctx, |ui| {
-            ui.horizontal_wrapped(|ui| {
-                self.brand(ui);
-                if ui.button("Add photos…").clicked()
-                    && let Some(paths) = rfd::FileDialog::new()
-                        .add_filter("Photos", importing::IMAGE_EXTENSIONS)
-                        .pick_files()
-                {
-                    self.queue(paths);
-                }
-                if ui.button("Add folder…").clicked()
-                    && let Some(paths) = rfd::FileDialog::new().pick_folders()
-                {
-                    self.queue(paths);
-                }
-                if ui
-                    .add_enabled(
-                        self.pending == 0 && !self.photos.is_empty(),
-                        egui::Button::new("Clear job"),
-                    )
-                    .clicked()
-                {
-                    self.photos.clear();
-                    self.sources.clear();
-                    self.textures.clear();
-                    self.selection.clear();
-                    self.memory = 0;
-                    self.dirty = true;
-                }
-                ui.separator();
-                ui.label(format!(
-                    "{} photos · {} sheets",
-                    self.photos.len(),
-                    self.layout.pages.len()
-                ));
-                if self.pending > 0 {
-                    ui.spinner();
-                    ui.label(format!("Importing {}…", self.pending));
-                }
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    let enabled = self.pending == 0
-                        && !self.photos.is_empty()
-                        && self.layout.rejected.is_empty()
-                        && self.editor.is_none();
-                    let label = if self.prepared.is_some() {
-                        "Print reviewed layout"
-                    } else {
-                        "Print…"
-                    };
-                    if ui.add_enabled(enabled, egui::Button::new(label)).clicked() {
-                        print = true;
-                    }
-                    if self.prepared.is_some() && ui.button("Change printer…").clicked() {
-                        self.prepared = None;
-                        print = true;
-                    }
-                });
-            })
+            print = self.toolbar(ui);
         });
         egui::TopBottomPanel::bottom("status").show(ctx,|ui| {
-            ui.horizontal(|ui|{ui.label("Preview zoom");ui.add(egui::Slider::new(&mut self.zoom,0.3..=2.0).show_value(false));ui.small(if self.settings.full_page { "One cropped photo fills each sheet." } else { "Photo sizes stay exact regardless of preview zoom." });});
+            ui.horizontal(|ui|{ui.add(Icon::Zoom.image(ui.visuals().text_color()));ui.label("Preview zoom");ui.add(egui::Slider::new(&mut self.zoom,0.3..=2.0).show_value(false));ui.small("Photo sizes stay exact regardless of preview zoom.");});
             if !self.notice.is_empty(){ui.label(&self.notice);}
             if !self.layout.rejected.is_empty() {
                 ui.colored_label(Color32::DARK_RED,format!("{} photo(s) do not fit. Choose a larger sheet or a smaller photo size. Nothing will be shrunk.",self.layout.rejected.len()));
                 for id in self.layout.rejected.iter().take(3) {
                     if let Some(photo)=self.photos.iter().find(|photo|photo.id==*id) {
-                        ui.small(format!("{} — {}",self.sources[photo.source].path.file_name().unwrap_or_default().to_string_lossy(),size_label(photo.size(self.settings.default_size))));
+                        ui.small(format!("{} — {}",self.sources[photo.source].path.file_name().unwrap_or_default().to_string_lossy(),photo.size(self.settings.default_size).label()));
                     }
                 }
                 if self.layout.rejected.len()>3 {
@@ -886,7 +1109,7 @@ impl eframe::App for App {
             }
             let low=self.layout.pages.iter().flat_map(|p|&p.photos).filter(|p|imaging::effective_dpi(self.sources[p.source].pixels.dimensions(),p)<150.0).count();
             if low>0{ui.colored_label(Color32::from_rgb(150,90,0),format!("{low} photo(s) are below 150 DPI at the requested size and may look soft."));}
-            if !self.errors.is_empty(){ui.horizontal(|ui|{ui.colored_label(Color32::DARK_RED,format!("{} problem(s)",self.errors.len()));if ui.button("Dismiss").clicked(){self.errors.clear();}});egui::ScrollArea::vertical().id_salt("errors").max_height(90.0).show(ui,|ui|for error in &self.errors {ui.colored_label(Color32::DARK_RED,error);});}
+            if !self.errors.is_empty(){ui.horizontal(|ui|{ui.add(Icon::Warning.image(Color32::DARK_RED));ui.colored_label(Color32::DARK_RED,format!("{} problem(s)",self.errors.len()));if ui.add(ui_icons::button(ui, Icon::Close, "Dismiss")).clicked(){self.errors.clear();}});egui::ScrollArea::vertical().id_salt("errors").max_height(90.0).show(ui,|ui|for error in &self.errors {ui.colored_label(Color32::DARK_RED,error);});}
         });
         egui::SidePanel::left("controls")
             .exact_width(265.0)
@@ -909,6 +1132,9 @@ impl eframe::App for App {
             )
             .show(ctx, |ui| self.preview(ui));
         self.size_editor(ctx);
+        if self.about_open {
+            self.about(ctx);
+        }
         if self.dirty {
             self.rebuild();
         }
@@ -966,6 +1192,52 @@ mod tests {
         (context, app)
     }
     #[test]
+    fn global_crop_updates_current_photos_but_individual_changes_and_copies_are_independent() {
+        let (_, mut app) = app();
+        app.set_crop_to_fill(false);
+        assert!(app.photos.iter().all(|photo| photo.fit == Fit::Contain));
+        assert_eq!(app.settings.default_fit(), Fit::Contain);
+        app.select(1, false);
+        app.action(Action::Fit(Fit::Fill));
+        app.action(Action::Copy);
+        assert_eq!(app.photos.last().unwrap().fit, Fit::Fill);
+        assert_eq!(app.photos[1].fit, Fit::Contain);
+        app.set_crop_to_fill(true);
+        assert!(app.photos.iter().all(|photo| photo.fit == Fit::Fill));
+        app.rebuild();
+        assert_eq!(app.layout.pages.len(), 4);
+    }
+
+    #[test]
+    fn full_page_overrides_and_reset_follow_the_new_default_and_custom_editor_keeps_units() {
+        let (_, mut app) = app();
+        app.settings.default_size = PrintSize::Fixed(Size::mm(40, 60));
+        app.select(1, false);
+        app.action(Action::Size(PrintSize::FullPage));
+        app.action(Action::Copy);
+        assert_eq!(
+            app.photos.last().unwrap().override_size,
+            Some(PrintSize::FullPage)
+        );
+        app.action(Action::Custom);
+        let editor = app.editor.as_ref().unwrap();
+        assert_eq!(editor.unit, Unit::Cm);
+        assert_eq!((&*editor.width, &*editor.height), ("10", "15"));
+        app.editor = None;
+        app.action(Action::Reset);
+        assert_eq!(
+            app.photos[0].size(app.settings.default_size),
+            PrintSize::Fixed(Size::mm(40, 60))
+        );
+        app.settings.default_size = PrintSize::FullPage;
+        assert!(
+            app.photos
+                .iter()
+                .all(|p| p.size(app.settings.default_size) == PrintSize::FullPage)
+        );
+    }
+
+    #[test]
     fn importing_a_folder_loads_nested_photos_and_reports_corrupt_images() {
         let directory = tempfile::tempdir().unwrap();
         std::fs::create_dir(directory.path().join("nested")).unwrap();
@@ -979,6 +1251,7 @@ mod tests {
         std::fs::write(directory.path().join("notes.txt"), b"ignored").unwrap();
         let context = egui::Context::default();
         let mut app = App::from_context(&context, vec![directory.path().into()]);
+        app.set_crop_to_fill(false);
         let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
         while app.pending > 0 && std::time::Instant::now() < deadline {
             app.poll_import(&context);
@@ -986,6 +1259,7 @@ mod tests {
         }
         assert_eq!(app.pending, 0);
         assert_eq!(app.photos.len(), 2);
+        assert!(app.photos.iter().all(|photo| photo.fit == Fit::Contain));
         assert_eq!(app.errors.len(), 1);
         assert!(app.errors[0].contains("broken.jpg"));
         assert!(app.photos[0].source_landscape);
@@ -998,25 +1272,25 @@ mod tests {
         let (_, mut app) = app();
         app.select(1, false);
         app.select(2, true);
-        app.action(Action::Size(Size::mm(60, 90)));
+        app.action(Action::Size(PrintSize::Fixed(Size::mm(60, 90))));
         app.action(Action::Copy);
         assert_eq!(app.photos.len(), 5);
         assert_eq!(app.photos[2].override_size, None);
         app.select(4, false);
-        app.action(Action::Size(Size::mm(40, 50)));
-        app.settings.default_size = Size::mm(130, 180);
+        app.action(Action::Size(PrintSize::Fixed(Size::mm(40, 50))));
+        app.settings.default_size = PrintSize::Fixed(Size::mm(130, 180));
         app.rebuild();
         assert_eq!(
             app.photos[0].size(app.settings.default_size),
-            Size::mm(60, 90)
+            PrintSize::Fixed(Size::mm(60, 90))
         );
         assert_eq!(
             app.photos[2].size(app.settings.default_size),
-            Size::mm(130, 180)
+            PrintSize::Fixed(Size::mm(130, 180))
         );
         assert_eq!(
             app.photos[3].size(app.settings.default_size),
-            Size::mm(40, 50)
+            PrintSize::Fixed(Size::mm(40, 50))
         );
         app.action(Action::Reset);
         assert_eq!(app.photos[3].override_size, None);
@@ -1024,12 +1298,82 @@ mod tests {
         assert_eq!(app.photos.len(), 4);
         assert!(app.selection.is_empty());
     }
+    fn text_rect(shapes: &[egui::epaint::ClippedShape], label: &str) -> Rect {
+        fn find(shape: &egui::Shape, label: &str) -> Option<Rect> {
+            match shape {
+                egui::Shape::Text(text) if text.galley.text() == label => {
+                    Some(Rect::from_min_size(text.pos, text.galley.size()))
+                }
+                egui::Shape::Vec(shapes) => shapes.iter().find_map(|shape| find(shape, label)),
+                _ => None,
+            }
+        }
+        shapes
+            .iter()
+            .find_map(|shape| find(&shape.shape, label))
+            .unwrap_or_else(|| panic!("missing text: {label}"))
+    }
+
+    #[test]
+    fn header_actions_are_centered_counts_are_right_and_about_uses_the_correct_brand() {
+        for width in [800.0, 1180.0] {
+            let (context, mut app) = app();
+            let mut output = None;
+            for _ in 0..2 {
+                output = Some(context.run(
+                    egui::RawInput {
+                        screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(width, 820.0))),
+                        ..Default::default()
+                    },
+                    |ctx| {
+                        egui::TopBottomPanel::top("test-toolbar").show(ctx, |ui| {
+                            app.toolbar(ui);
+                        });
+                    },
+                ));
+            }
+            let shapes = &output.unwrap().shapes;
+            let brand = text_rect(shapes, "PrintMarten");
+            let add = text_rect(shapes, "Add photos…");
+            let clear = text_rect(shapes, "Clear job");
+            let print = text_rect(shapes, "Print…");
+            let counts = text_rect(shapes, "3 photos · 3 sheets");
+            assert!(brand.height() >= 27.0);
+            assert!(counts.left() > width * 0.7);
+            assert!(clear.left() > add.right() && print.left() > clear.right());
+            // Include the first button's icon and symmetric button padding.
+            let center = (add.left() - 14.0 - 4.0 + print.right()) / 2.0;
+            assert!(
+                (center - width / 2.0).abs() < 6.0,
+                "action center {center} at width {width}"
+            );
+            if width == 800.0 {
+                assert!(add.top() > brand.bottom());
+            }
+            app.about_open = true;
+            let mut output = None;
+            for _ in 0..2 {
+                output = Some(context.run(
+                    egui::RawInput {
+                        screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(width, 820.0))),
+                        ..Default::default()
+                    },
+                    |ctx| app.about(ctx),
+                ));
+            }
+            let shapes = &output.unwrap().shapes;
+            text_rect(shapes, "Author: Piotr Wenta");
+            text_rect(shapes, "PrintMarten on GitHub");
+            text_rect(shapes, "Licensed under GNU GPL v3 (GPL-3.0-only)");
+        }
+    }
+
     #[test]
     fn headless_preview_and_context_controls_render_after_mixed_edits() {
         let (context, mut app) = app();
         app.select(2, false);
         app.action(Action::Fit(Fit::Contain));
-        app.action(Action::Size(Size::mm(60, 60)));
+        app.action(Action::Size(PrintSize::Fixed(Size::mm(60, 60))));
         app.rebuild();
         let output = context.run(
             egui::RawInput {

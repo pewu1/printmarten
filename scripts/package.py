@@ -93,18 +93,8 @@ def windows(stage, out, name, binary, native, icon, arch, version):
     portable.mkdir()
     shutil.copy2(binary, portable / "printmarten.exe")
     copy_libraries(native, portable, "*.dll")
-    # Ship MSVC's redistributable app-local runtime, including C++ codec dependencies.
-    redist = os.environ.get("VCToolsRedistDir")
-    if not redist:
-        raise RuntimeError("Run packaging from an MSVC developer environment")
-    runtime = Path(redist) / "x64/Microsoft.VC143.CRT"
-    if not runtime.exists():
-        candidates = list((Path(redist) / "x64").glob("Microsoft.VC*.CRT"))
-        if not candidates:
-            raise RuntimeError("MSVC app-local runtime not found")
-        runtime = candidates[0]
-    for dll in runtime.glob("*.dll"):
-        shutil.copy2(dll, portable / dll.name)
+    # MSVC runtime is installed separately as a system prerequisite. Do not
+    # redistribute proprietary runtime DLLs inside the GPL application payload.
     notices(portable / "Documentation", native)
     icon.save(stage / "PrintMarten.ico", format="ICO", sizes=[(16,16),(32,32),(48,48),(64,64),(128,128),(256,256)])
     with zipfile.ZipFile(out / f"{name}-portable.zip", "w", zipfile.ZIP_DEFLATED) as archive:

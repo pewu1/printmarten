@@ -1,0 +1,446 @@
+crate,version,declared_license,cargo_about_selected_licenses,review_scope
+ab_glyph,0.2.32,Apache-2.0,Apache-2.0,cargo-about default-feature graph
+ab_glyph_rasterizer,0.1.10,Apache-2.0,Apache-2.0,cargo-about default-feature graph
+adler2,2.0.1,0BSD OR MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+aes,0.8.4,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+ahash,0.8.12,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+android-activity,0.6.1,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+android-properties,0.2.2,MIT,MIT,cargo-about default-feature graph
+anyhow,1.0.104,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+arboard,3.7.0,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+arrayref,0.3.9,BSD-2-Clause,BSD-2-Clause,cargo-about default-feature graph
+arrayvec,0.7.8,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+as-raw-xcb-connection,1.0.1,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+ashpd,0.11.1,MIT,MIT,cargo-about default-feature graph
+async-broadcast,0.7.2,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+async-channel,2.5.0,Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+async-executor,1.14.0,Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+async-fs,2.2.0,Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+async-io,2.6.0,Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+async-lock,3.4.2,Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+async-net,2.0.0,Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+async-process,2.5.0,Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+async-recursion,1.2.0,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+async-signal,0.2.14,Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+async-task,4.7.1,Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+async-trait,0.1.92,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+atomic-waker,1.1.2,Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+autocfg,1.5.1,Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+base64,0.22.1,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+bit-set,0.8.0,Apache-2.0 OR MIT,,optional graph metadata review
+bit-vec,0.8.0,Apache-2.0 OR MIT,,optional graph metadata review
+bitflags,1.3.2,MIT/Apache-2.0,MIT,cargo-about default-feature graph
+bitflags,2.13.2,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+block-buffer,0.10.4,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+block-padding,0.3.3,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+block2,0.5.1,MIT,MIT,cargo-about default-feature graph
+block2,0.6.2,MIT,MIT,cargo-about default-feature graph
+blocking,1.7.0,Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+bumpalo,3.20.3,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+bytecount,0.6.9,Apache-2.0/MIT,MIT,cargo-about default-feature graph
+bytemuck,1.25.2,Zlib OR Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+bytemuck_derive,1.12.1,Zlib OR Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+byteorder-lite,0.1.0,Unlicense OR MIT,MIT,cargo-about default-feature graph
+bytes,1.12.1,MIT,MIT,cargo-about default-feature graph
+cairo-rs,0.21.5,MIT,MIT,cargo-about default-feature graph
+cairo-sys-rs,0.21.5,MIT,MIT,cargo-about default-feature graph
+calloop,0.13.0,MIT,MIT,cargo-about default-feature graph
+calloop,0.14.5,MIT,MIT,cargo-about default-feature graph
+calloop-wayland-source,0.3.0,MIT,MIT,cargo-about default-feature graph
+calloop-wayland-source,0.4.1,MIT,MIT,cargo-about default-feature graph
+cbc,0.1.2,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+cc,1.10.0,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+cfg-expr,0.20.10,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+cfg-if,1.0.5,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+cfg_aliases,0.2.2,MIT,MIT,cargo-about default-feature graph
+cgl,0.3.2,MIT / Apache-2.0,MIT,cargo-about default-feature graph
+cipher,0.4.4,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+clipboard-win,5.4.3,BSL-1.0,BSL-1.0,cargo-about default-feature graph
+codespan-reporting,0.12.0,Apache-2.0,,optional graph metadata review
+combine,4.6.9,MIT,MIT,cargo-about default-feature graph
+concurrent-queue,2.5.0,Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+core-foundation,0.9.4,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+core-foundation-sys,0.8.7,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+core-graphics,0.23.2,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+core-graphics-types,0.1.3,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+core_detect,1.0.0,MIT/Apache-2.0,MIT,cargo-about default-feature graph
+cpufeatures,0.2.17,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+crc32fast,1.5.3,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+crossbeam-utils,0.8.23,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+crunchy,0.2.4,MIT,MIT,cargo-about default-feature graph
+crypto-common,0.1.7,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+cursor-icon,1.2.0,MIT OR Apache-2.0 OR Zlib,MIT,cargo-about default-feature graph
+data-url,0.3.2,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+digest,0.10.7,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+dispatch,0.2.0,MIT,MIT,cargo-about default-feature graph
+dispatch2,0.3.1,Zlib OR Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+displaydoc,0.2.7,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+dlib,0.5.3,MIT,MIT,cargo-about default-feature graph
+document-features,0.2.12,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+downcast-rs,1.2.1,MIT/Apache-2.0,MIT,cargo-about default-feature graph
+dpi,0.1.2,Apache-2.0 AND MIT,Apache-2.0 AND MIT,cargo-about default-feature graph
+dunce,1.0.5,CC0-1.0 OR MIT-0 OR Apache-2.0,Apache-2.0,cargo-about default-feature graph
+ecb,0.1.2,MIT,MIT,cargo-about default-feature graph
+ecolor,0.33.3,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+eframe,0.33.3,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+egui,0.33.3,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+egui-wgpu,0.33.3,MIT OR Apache-2.0,,optional graph metadata review
+egui-winit,0.33.3,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+egui_extras,0.33.3,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+egui_glow,0.33.3,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+emath,0.33.3,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+encoding_rs,0.8.42,(Apache-2.0 OR MIT) AND BSD-3-Clause,BSD-3-Clause AND MIT,cargo-about default-feature graph
+endi,1.1.1,MIT,MIT,cargo-about default-feature graph
+enum-map,2.7.3,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+enum-map-derive,0.17.0,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+enumflags2,0.7.12,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+enumflags2_derive,0.7.12,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+epaint,0.33.3,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+epaint_default_fonts,0.33.3,(MIT OR Apache-2.0) AND OFL-1.1 AND Ubuntu-font-1.0,MIT AND OFL-1.1 AND Ubuntu-font-1.0,cargo-about default-feature graph
+equivalent,1.0.3,Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+errno,0.3.14,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+error-code,3.4.0,BSL-1.0,BSL-1.0,cargo-about default-feature graph
+euclid,0.22.14,MIT OR Apache-2.0,,optional graph metadata review
+event-listener,5.4.2,Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+event-listener-strategy,0.5.4,Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+fastrand,2.5.0,Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+fax,0.2.7,MIT,MIT,cargo-about default-feature graph
+fdeflate,0.3.7,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+field-offset,0.3.6,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+find-msvc-tools,0.1.15,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+flate2,1.1.10,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+float-cmp,0.9.0,MIT,MIT,cargo-about default-feature graph
+foldhash,0.2.0,Zlib,,optional graph metadata review
+foreign-types,0.5.0,MIT/Apache-2.0,MIT,cargo-about default-feature graph
+foreign-types-macros,0.2.4,MIT/Apache-2.0,MIT,cargo-about default-feature graph
+foreign-types-shared,0.3.1,MIT/Apache-2.0,MIT,cargo-about default-feature graph
+form_urlencoded,1.2.2,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+futures-channel,0.3.34,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+futures-core,0.3.34,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+futures-executor,0.3.34,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+futures-io,0.3.34,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+futures-lite,2.6.1,Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+futures-macro,0.3.34,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+futures-task,0.3.34,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+futures-util,0.3.34,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+gdk-pixbuf,0.21.5,MIT,MIT,cargo-about default-feature graph
+gdk-pixbuf-sys,0.21.5,MIT,MIT,cargo-about default-feature graph
+gdk4,0.10.3,MIT,MIT,cargo-about default-feature graph
+gdk4-sys,0.10.3,MIT,MIT,cargo-about default-feature graph
+generic-array,0.14.7,MIT,MIT,cargo-about default-feature graph
+gethostname,1.1.0,Apache-2.0,Apache-2.0,cargo-about default-feature graph
+getrandom,0.3.4,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+getrandom,0.4.3,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+gio,0.21.5,MIT,MIT,cargo-about default-feature graph
+gio-sys,0.21.5,MIT,MIT,cargo-about default-feature graph
+gl_generator,0.14.0,Apache-2.0,Apache-2.0,cargo-about default-feature graph
+glib,0.21.5,MIT,MIT,cargo-about default-feature graph
+glib-macros,0.21.5,MIT,MIT,cargo-about default-feature graph
+glib-sys,0.21.5,MIT,MIT,cargo-about default-feature graph
+glow,0.16.0,MIT OR Apache-2.0 OR Zlib,MIT,cargo-about default-feature graph
+glutin,0.32.3,Apache-2.0,Apache-2.0,cargo-about default-feature graph
+glutin-winit,0.5.0,MIT,MIT,cargo-about default-feature graph
+glutin_egl_sys,0.7.1,Apache-2.0,Apache-2.0,cargo-about default-feature graph
+glutin_glx_sys,0.6.1,Apache-2.0,Apache-2.0,cargo-about default-feature graph
+glutin_wgl_sys,0.6.1,Apache-2.0,Apache-2.0,cargo-about default-feature graph
+gobject-sys,0.21.5,MIT,MIT,cargo-about default-feature graph
+graphene-rs,0.21.5,MIT,MIT,cargo-about default-feature graph
+graphene-sys,0.21.5,MIT,MIT,cargo-about default-feature graph
+gsk4,0.10.3,MIT,MIT,cargo-about default-feature graph
+gsk4-sys,0.10.3,MIT,MIT,cargo-about default-feature graph
+gtk4,0.10.3,MIT,MIT,cargo-about default-feature graph
+gtk4-macros,0.10.3,MIT,MIT,cargo-about default-feature graph
+gtk4-sys,0.10.3,MIT,MIT,cargo-about default-feature graph
+half,2.7.1,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+hashbrown,0.16.1,MIT OR Apache-2.0,,optional graph metadata review
+hashbrown,0.17.1,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+heck,0.5.0,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+hermit-abi,0.5.3,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+hex,0.4.3,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+hexf-parse,0.2.1,CC0-1.0,,optional graph metadata review
+icu_collections,2.4.0,Unicode-3.0,Unicode-3.0,cargo-about default-feature graph
+icu_locale_core,2.4.0,Unicode-3.0,Unicode-3.0,cargo-about default-feature graph
+icu_normalizer,2.4.0,Unicode-3.0,Unicode-3.0,cargo-about default-feature graph
+icu_normalizer_data,2.4.0,Unicode-3.0,Unicode-3.0,cargo-about default-feature graph
+icu_properties,2.4.0,Unicode-3.0,Unicode-3.0,cargo-about default-feature graph
+icu_properties_data,2.4.0,Unicode-3.0,Unicode-3.0,cargo-about default-feature graph
+icu_provider,2.4.0,Unicode-3.0,Unicode-3.0,cargo-about default-feature graph
+idna,1.1.0,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+idna_adapter,1.2.2,Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+image,0.25.10,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+image-webp,0.2.4,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+imagesize,0.13.0,MIT,MIT,cargo-about default-feature graph
+indexmap,2.14.2,Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+inout,0.1.4,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+itoa,1.0.18,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+jni,0.22.4,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+jni-macros,0.22.4,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+jni-sys,0.3.1,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+jni-sys,0.4.1,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+jni-sys-macros,0.4.1,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+jobserver,0.1.35,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+js-sys,0.3.106,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+khronos_api,3.1.0,Apache-2.0,Apache-2.0,cargo-about default-feature graph
+kurbo,0.11.3,Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+lcms2,6.2.0,MIT,MIT,cargo-about default-feature graph
+lcms2-sys,4.0.7,MIT,MIT,cargo-about default-feature graph
+libc,0.2.191,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+libloading,0.8.9,ISC,ISC,cargo-about default-feature graph
+libm,0.2.16,MIT,,optional graph metadata review
+libredox,0.1.25,MIT,MIT,cargo-about default-feature graph
+linux-raw-sys,0.4.15,Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+linux-raw-sys,0.12.1,Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+litemap,0.8.3,Unicode-3.0,Unicode-3.0,cargo-about default-feature graph
+litrs,1.0.1,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+lock_api,0.4.14,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+log,0.4.34,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+lopdf,0.38.0,MIT,MIT,cargo-about default-feature graph
+md-5,0.10.6,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+memchr,2.8.3,Unlicense OR MIT,MIT,cargo-about default-feature graph
+memmap2,0.9.12,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+memoffset,0.9.1,MIT,MIT,cargo-about default-feature graph
+miniz_oxide,0.8.9,MIT OR Zlib OR Apache-2.0,MIT,cargo-about default-feature graph
+miniz_oxide,0.9.1,MIT OR Zlib OR Apache-2.0,MIT,cargo-about default-feature graph
+moxcms,0.8.1,BSD-3-Clause OR Apache-2.0,Apache-2.0,cargo-about default-feature graph
+multiversion_no_op,1.0.0,Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+naga,27.0.3,MIT OR Apache-2.0,,optional graph metadata review
+ndk,0.9.0,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+ndk-context,0.1.1,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+ndk-sys,0.6.0+11769913,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+nohash-hasher,0.2.0,Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+nom,8.0.0,MIT,MIT,cargo-about default-feature graph
+nom_locate,5.0.0,MIT,MIT,cargo-about default-feature graph
+num-traits,0.2.19,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+num_enum,0.7.6,BSD-3-Clause OR MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+num_enum_derive,0.7.6,BSD-3-Clause OR MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+objc-sys,0.3.5,MIT,MIT,cargo-about default-feature graph
+objc2,0.5.3,MIT,MIT,cargo-about default-feature graph
+objc2,0.6.5,MIT,MIT,cargo-about default-feature graph
+objc2-app-kit,0.2.2,MIT,MIT,cargo-about default-feature graph
+objc2-app-kit,0.3.2,Zlib OR Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+objc2-cloud-kit,0.2.2,MIT,,optional graph metadata review
+objc2-contacts,0.2.2,MIT,,optional graph metadata review
+objc2-core-data,0.2.2,MIT,,optional graph metadata review
+objc2-core-foundation,0.3.2,Zlib OR Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+objc2-core-graphics,0.3.2,Zlib OR Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+objc2-core-image,0.2.2,MIT,,optional graph metadata review
+objc2-core-location,0.2.2,MIT,,optional graph metadata review
+objc2-encode,4.1.0,MIT,MIT,cargo-about default-feature graph
+objc2-foundation,0.2.2,MIT,MIT,cargo-about default-feature graph
+objc2-foundation,0.3.2,MIT,MIT,cargo-about default-feature graph
+objc2-io-surface,0.3.2,Zlib OR Apache-2.0 OR MIT,,optional graph metadata review
+objc2-link-presentation,0.2.2,MIT,,optional graph metadata review
+objc2-metal,0.2.2,MIT,,optional graph metadata review
+objc2-quartz-core,0.2.2,MIT,,optional graph metadata review
+objc2-symbols,0.2.2,MIT,,optional graph metadata review
+objc2-ui-kit,0.2.2,MIT,MIT,cargo-about default-feature graph
+objc2-uniform-type-identifiers,0.2.2,MIT,,optional graph metadata review
+objc2-user-notifications,0.2.2,MIT,,optional graph metadata review
+once_cell,1.21.4,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+orbclient,0.3.55,MIT,MIT,cargo-about default-feature graph
+ordered-stream,0.2.0,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+owned_ttf_parser,0.25.1,Apache-2.0,Apache-2.0,cargo-about default-feature graph
+pango,0.21.5,MIT,MIT,cargo-about default-feature graph
+pango-sys,0.21.5,MIT,MIT,cargo-about default-feature graph
+parking,2.2.1,Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+parking_lot,0.12.5,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+parking_lot_core,0.9.12,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+percent-encoding,2.3.2,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+pico-args,0.5.0,MIT,MIT,cargo-about default-feature graph
+pin-project,1.1.13,Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+pin-project-internal,1.1.13,Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+pin-project-lite,0.2.17,Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+piper,0.2.5,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+pkg-config,0.3.34,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+plain,0.2.3,MIT/Apache-2.0,MIT,cargo-about default-feature graph
+png,0.17.16,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+png,0.18.1,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+polling,3.11.0,Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+pollster,0.4.0,Apache-2.0/MIT,MIT,cargo-about default-feature graph
+portable-atomic,1.15.0,Apache-2.0 OR MIT,,optional graph metadata review
+portable-atomic-util,0.2.8,Apache-2.0 OR MIT,,optional graph metadata review
+potential_utf,0.1.6,Unicode-3.0,Unicode-3.0,cargo-about default-feature graph
+ppv-lite86,0.2.21,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+proc-macro-crate,3.5.0,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+proc-macro2,1.0.107,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+profiling,1.0.18,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+pxfm,0.1.30,BSD-3-Clause OR Apache-2.0,Apache-2.0,cargo-about default-feature graph
+quick-error,2.0.1,MIT/Apache-2.0,MIT,cargo-about default-feature graph
+quick-xml,0.41.0,MIT,MIT,cargo-about default-feature graph
+quote,1.0.47,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+r-efi,5.3.0,MIT OR Apache-2.0 OR LGPL-2.1-or-later,MIT,cargo-about default-feature graph
+r-efi,6.0.0,MIT OR Apache-2.0 OR LGPL-2.1-or-later,MIT,cargo-about default-feature graph
+rand,0.9.5,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+rand_chacha,0.9.0,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+rand_core,0.9.5,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+rangemap,1.8.0,MIT/Apache-2.0,MIT,cargo-about default-feature graph
+raw-window-handle,0.6.2,MIT OR Apache-2.0 OR Zlib,MIT,cargo-about default-feature graph
+redox_syscall,0.4.1,MIT,MIT,cargo-about default-feature graph
+redox_syscall,0.5.18,MIT,MIT,cargo-about default-feature graph
+redox_syscall,0.9.5,MIT,,optional graph metadata review
+renderdoc-sys,1.1.0,MIT OR Apache-2.0,,optional graph metadata review
+resvg,0.45.1,Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+rfd,0.15.4,MIT,MIT,cargo-about default-feature graph
+rgb,0.8.53,MIT,MIT,cargo-about default-feature graph
+roxmltree,0.20.0,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+rustc-hash,1.1.0,Apache-2.0/MIT,,optional graph metadata review
+rustc-hash,2.1.3,Apache-2.0 OR MIT,,optional graph metadata review
+rustc_version,0.4.1,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+rustix,0.38.44,Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+rustix,1.1.5,Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+rustversion,1.0.23,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+same-file,1.0.6,Unlicense/MIT,MIT,cargo-about default-feature graph
+scoped-tls,1.0.1,MIT/Apache-2.0,MIT,cargo-about default-feature graph
+scopeguard,1.2.0,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+semver,1.0.28,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+serde,1.0.229,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+serde_core,1.0.229,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+serde_derive,1.0.229,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+serde_json,1.0.154,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+serde_repr,0.1.21,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+serde_spanned,1.1.2,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+sha2,0.10.9,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+shlex,2.0.1,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+signal-hook-registry,1.4.8,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+simd-adler32,0.3.10,MIT,MIT,cargo-about default-feature graph
+simd_cesu8,1.2.0,Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+simdutf8,0.1.5,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+simplecss,0.2.2,Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+siphasher,1.0.4,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+slab,0.4.12,MIT,MIT,cargo-about default-feature graph
+slotmap,1.1.1,Zlib,Zlib,cargo-about default-feature graph
+smallvec,1.16.4,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+smithay-client-toolkit,0.19.2,MIT,MIT,cargo-about default-feature graph
+smithay-client-toolkit,0.20.0,MIT,MIT,cargo-about default-feature graph
+smithay-clipboard,0.7.3,MIT,MIT,cargo-about default-feature graph
+smol_str,0.2.2,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+stable_deref_trait,1.2.1,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+static_assertions,1.1.0,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+strict-num,0.1.1,MIT,MIT,cargo-about default-feature graph
+stringprep,0.1.5,MIT/Apache-2.0,MIT,cargo-about default-feature graph
+svgtypes,0.15.3,Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+syn,2.0.119,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+syn,3.0.9,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+synstructure,0.14.0,MIT,MIT,cargo-about default-feature graph
+system-deps,7.0.8,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+target-lexicon,0.13.5,Apache-2.0 WITH LLVM-exception,Apache-2.0,cargo-about default-feature graph
+tempfile,3.27.0,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+thiserror,1.0.69,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+thiserror,2.0.21,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+thiserror-impl,1.0.69,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+thiserror-impl,2.0.21,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+tiff,0.11.3,MIT,MIT,cargo-about default-feature graph
+tiny-skia,0.11.4,BSD-3-Clause,BSD-3-Clause,cargo-about default-feature graph
+tiny-skia-path,0.11.4,BSD-3-Clause,BSD-3-Clause,cargo-about default-feature graph
+tinystr,0.8.5,Unicode-3.0,Unicode-3.0,cargo-about default-feature graph
+tinyvec,1.13.3,Zlib OR Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+tokio,1.54.1,MIT,MIT,cargo-about default-feature graph
+toml,1.1.8+spec-1.1.0,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+toml_datetime,1.1.2+spec-1.1.0,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+toml_edit,0.25.17+spec-1.1.0,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+toml_parser,1.1.5+spec-1.1.0,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+toml_writer,1.1.3+spec-1.1.0,MIT OR Apache-2.0,,optional graph metadata review
+tracing,0.1.44,MIT,MIT,cargo-about default-feature graph
+tracing-attributes,0.1.31,MIT,MIT,cargo-about default-feature graph
+tracing-core,0.1.36,MIT,MIT,cargo-about default-feature graph
+ttf-parser,0.25.1,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+type-map,0.5.1,MIT/Apache-2.0,,optional graph metadata review
+typenum,1.20.1,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+uds_windows,1.2.1,MIT,MIT,cargo-about default-feature graph
+unicode-bidi,0.3.18,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+unicode-ident,1.0.27,(MIT OR Apache-2.0) AND Unicode-3.0,MIT AND Unicode-3.0,cargo-about default-feature graph
+unicode-normalization,0.1.26,(MIT OR Apache-2.0) AND Unicode-3.0,MIT AND Unicode-3.0,cargo-about default-feature graph
+unicode-properties,0.1.4,MIT/Apache-2.0,MIT,cargo-about default-feature graph
+unicode-segmentation,1.13.3,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+unicode-width,0.2.2,MIT OR Apache-2.0,,optional graph metadata review
+url,2.5.8,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+urlencoding,2.1.3,MIT,MIT,cargo-about default-feature graph
+usvg,0.45.1,Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+utf8_iter,1.0.4,Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+uuid,1.29.0,Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+version-compare,0.2.1,MIT,MIT,cargo-about default-feature graph
+version_check,0.9.5,MIT/Apache-2.0,MIT,cargo-about default-feature graph
+walkdir,2.5.0,Unlicense/MIT,MIT,cargo-about default-feature graph
+wasip2,1.0.4+wasi-0.2.12,Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+wasm-bindgen,0.2.129,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+wasm-bindgen-futures,0.4.79,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+wasm-bindgen-macro,0.2.129,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+wasm-bindgen-macro-support,0.2.129,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+wasm-bindgen-shared,0.2.129,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+wayland-backend,0.3.17,MIT,MIT,cargo-about default-feature graph
+wayland-client,0.31.15,MIT,MIT,cargo-about default-feature graph
+wayland-csd-frame,0.3.0,MIT,MIT,cargo-about default-feature graph
+wayland-cursor,0.31.14,MIT,MIT,cargo-about default-feature graph
+wayland-protocols,0.32.13,MIT,MIT,cargo-about default-feature graph
+wayland-protocols-experimental,20250721.0.1,MIT,MIT,cargo-about default-feature graph
+wayland-protocols-misc,0.3.12,MIT,MIT,cargo-about default-feature graph
+wayland-protocols-plasma,0.3.12,MIT,MIT,cargo-about default-feature graph
+wayland-protocols-wlr,0.3.12,MIT,MIT,cargo-about default-feature graph
+wayland-scanner,0.31.11,MIT,MIT,cargo-about default-feature graph
+wayland-sys,0.31.11,MIT,MIT,cargo-about default-feature graph
+web-sys,0.3.106,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+web-time,1.1.0,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+webbrowser,1.2.5,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+weezl,0.1.12,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+wgpu,27.0.1,MIT OR Apache-2.0,,optional graph metadata review
+wgpu-core,27.0.3,MIT OR Apache-2.0,,optional graph metadata review
+wgpu-core-deps-windows-linux-android,27.0.0,MIT OR Apache-2.0,,optional graph metadata review
+wgpu-hal,27.0.4,MIT OR Apache-2.0,,optional graph metadata review
+wgpu-types,27.0.1,MIT OR Apache-2.0,,optional graph metadata review
+winapi-util,0.1.11,Unlicense OR MIT,MIT,cargo-about default-feature graph
+windows,0.62.2,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+windows-collections,0.3.2,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+windows-core,0.62.2,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+windows-future,0.3.2,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+windows-implement,0.60.2,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+windows-interface,0.59.3,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+windows-link,0.2.1,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+windows-numerics,0.3.1,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+windows-result,0.4.1,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+windows-strings,0.5.1,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+windows-sys,0.52.0,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+windows-sys,0.59.0,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+windows-sys,0.61.2,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+windows-targets,0.52.6,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+windows-threading,0.2.1,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+windows_aarch64_gnullvm,0.52.6,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+windows_aarch64_msvc,0.52.6,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+windows_i686_gnu,0.52.6,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+windows_i686_gnullvm,0.52.6,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+windows_i686_msvc,0.52.6,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+windows_x86_64_gnu,0.52.6,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+windows_x86_64_gnullvm,0.52.6,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+windows_x86_64_msvc,0.52.6,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+winit,0.30.13,Apache-2.0,Apache-2.0,cargo-about default-feature graph
+winnow,1.0.4,MIT,MIT,cargo-about default-feature graph
+winresource,0.1.34,MIT,MIT,cargo-about default-feature graph
+wit-bindgen,0.57.1,Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+writeable,0.6.4,Unicode-3.0,Unicode-3.0,cargo-about default-feature graph
+x11-dl,2.21.0,MIT,MIT,cargo-about default-feature graph
+x11rb,0.13.2,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+x11rb-protocol,0.13.2,MIT OR Apache-2.0,MIT,cargo-about default-feature graph
+xcursor,0.3.11,MIT,MIT,cargo-about default-feature graph
+xkbcommon-dl,0.4.2,MIT,MIT,cargo-about default-feature graph
+xkeysym,0.2.1,MIT OR Apache-2.0 OR Zlib,MIT,cargo-about default-feature graph
+xml-rs,0.8.29,MIT,MIT,cargo-about default-feature graph
+xmlwriter,0.1.0,MIT,MIT,cargo-about default-feature graph
+yoke,0.8.4,Unicode-3.0,Unicode-3.0,cargo-about default-feature graph
+yoke-derive,0.8.4,Unicode-3.0,Unicode-3.0,cargo-about default-feature graph
+zbus,5.19.0,MIT,MIT,cargo-about default-feature graph
+zbus_macros,5.19.0,MIT,MIT,cargo-about default-feature graph
+zbus_names,4.3.5,MIT,MIT,cargo-about default-feature graph
+zcheapstr,1.1.0,MIT,MIT,cargo-about default-feature graph
+zerocopy,0.8.63,BSD-2-Clause OR Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+zerocopy-derive,0.8.63,BSD-2-Clause OR Apache-2.0 OR MIT,MIT,cargo-about default-feature graph
+zerofrom,0.1.8,Unicode-3.0,Unicode-3.0,cargo-about default-feature graph
+zerofrom-derive,0.1.8,Unicode-3.0,Unicode-3.0,cargo-about default-feature graph
+zerotrie,0.2.5,Unicode-3.0,Unicode-3.0,cargo-about default-feature graph
+zerovec,0.11.9,Unicode-3.0,Unicode-3.0,cargo-about default-feature graph
+zerovec-derive,0.11.7,Unicode-3.0,Unicode-3.0,cargo-about default-feature graph
+zlib-rs,0.6.8,Zlib,,optional graph metadata review
+zmij,1.0.23,MIT,MIT,cargo-about default-feature graph
+zune-core,0.5.3,MIT OR Apache-2.0 OR Zlib,MIT,cargo-about default-feature graph
+zune-jpeg,0.5.15,MIT OR Apache-2.0 OR Zlib,MIT,cargo-about default-feature graph
+zvariant,5.15.1,MIT,MIT,cargo-about default-feature graph
+zvariant_derive,5.15.1,MIT,MIT,cargo-about default-feature graph
+zvariant_utils,4.2.0,MIT,MIT,cargo-about default-feature graph

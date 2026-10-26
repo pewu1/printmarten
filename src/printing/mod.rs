@@ -74,7 +74,7 @@ mod tests {
     #[test]
     fn borderless_requires_driver_support_and_reflows_to_final_paper_size() {
         let settings = Settings {
-            full_page: true,
+            default_size: PrintSize::FullPage,
             borderless: true,
             ..Settings::default()
         };
@@ -123,7 +123,11 @@ mod tests {
                 fit: Fit::Fill,
             },
         ];
-        let settings = Settings::default();
+        let settings = Settings {
+            default_size: PrintSize::Fixed(Size::mm(100, 150)),
+            borderless: false,
+            ..Settings::default()
+        };
         let original = arrange(&photos, &settings, Insets::default());
         let mut geometry = Geometry {
             paper: Size::mm(148, 210),
@@ -139,11 +143,11 @@ mod tests {
                 Size {
                     w: p.rect.w,
                     h: p.rect.h
-                } == settings.default_size
+                } == settings.default_size.fixed_or(settings.paper)
                     || Size {
                         w: p.rect.h,
                         h: p.rect.w
-                    } == settings.default_size
+                    } == settings.default_size.fixed_or(settings.paper)
             );
         }
         geometry.scale_percent = 90.0;

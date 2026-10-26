@@ -98,7 +98,7 @@ jobs:
           if [[ "$(cargo about --version 2>/dev/null || true)" != "cargo-about 0.8.2" ]]; then
             cargo install cargo-about --version 0.8.2 --locked --force
           fi
-          cargo about generate --locked packaging/licenses.hbs --output-file target/THIRD_PARTY_LICENSES.html
+          cargo about generate --locked --fail packaging/licenses.hbs --output-file target/THIRD_PARTY_LICENSES.html
       - name: Package (Unix)
         if: runner.os != 'Windows'
         run: python scripts/package.py --platform ${{ matrix.platform }} --arch ${{ matrix.arch }} --sha ${{ github.sha }}
@@ -114,6 +114,9 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Validate packages
         run: python scripts/validate_packages.py --platform ${{ matrix.platform }} --arch ${{ matrix.arch }}
+      - name: Package complete corresponding source
+        if: runner.os == 'Linux'
+        run: python scripts/package_source.py --sha ${{ github.sha }}
       - name: Upload application packages
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -157,7 +160,9 @@ jobs:
 
           Downloads include macOS Intel and Apple Silicon DMGs, Windows x64 installer and portable ZIP, and Linux x64 DEB and tar.gz packages, with SHA-256 checksums.
 
-          The libheif and libde265 source archives match the LGPL libraries bundled in every platform package. Packages are not publisher-signed or notarized.
+          PrintMarten is licensed under GNU GPL v3 only. The PrintMarten source archive contains the matching application, vendored locked Rust dependencies, native codec sources, and build scripts. Separate libheif and libde265 source archives are also provided.
+
+          Windows requires Microsoft's separately installed Visual C++ v14 x64 runtime. Packages do not bundle Microsoft runtime DLLs. Packages are not publisher-signed or notarized.
 
           Build: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
           EOF

@@ -211,17 +211,39 @@ pub enum Fit {
     Contain,
 }
 
+/// A print can use the printable sheet or an exact physical rectangle.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PrintSize {
+    #[default]
+    FullPage,
+    Fixed(Size),
+}
+impl PrintSize {
+    pub fn label(self) -> String {
+        match self {
+            Self::FullPage => "Full page".into(),
+            Self::Fixed(size) => size_label(size),
+        }
+    }
+    pub fn fixed_or(self, fallback: Size) -> Size {
+        match self {
+            Self::FullPage => fallback,
+            Self::Fixed(size) => size,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Photo {
     pub id: u64,
     pub source: usize,
     #[serde(default)]
     pub source_landscape: bool,
-    pub override_size: Option<Size>,
+    pub override_size: Option<PrintSize>,
     pub fit: Fit,
 }
 impl Photo {
-    pub fn size(&self, default: Size) -> Size {
+    pub fn size(&self, default: PrintSize) -> PrintSize {
         self.override_size.unwrap_or(default)
     }
 }
@@ -259,9 +281,8 @@ pub struct Settings {
     pub photo_paper: bool,
     #[serde(default)]
     pub borderless: bool,
-    #[serde(default)]
-    pub full_page: bool,
-    pub default_size: Size,
+    pub default_size: PrintSize,
+    pub crop_to_fill: bool,
     pub margin: Length,
     pub gap: Length,
     pub cut_lines: bool,
@@ -270,10 +291,10 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             paper: Size::mm(210, 297),
-            photo_paper: false,
-            borderless: false,
-            full_page: false,
-            default_size: Size::mm(100, 150),
+            photo_paper: true,
+            borderless: true,
+            default_size: PrintSize::FullPage,
+            crop_to_fill: true,
             margin: 5000,
             gap: 2000,
             cut_lines: false,
@@ -282,6 +303,14 @@ impl Default for Settings {
 }
 
 impl Settings {
+    pub fn default_fit(&self) -> Fit {
+        if self.crop_to_fill {
+            Fit::Fill
+        } else {
+            Fit::Contain
+        }
+    }
+
     pub fn set_photo_paper(&mut self, photo_paper: bool) {
         self.photo_paper = photo_paper;
         self.borderless = photo_paper;
@@ -308,6 +337,14 @@ impl Settings {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn startup_defaults_are_full_page_photo_stock_borderless_and_crop() {
+        let settings = Settings::default();
+        assert_eq!(settings.paper, Size::mm(210, 297));
+        assert_eq!(settings.default_size, PrintSize::FullPage);
+        assert!(settings.photo_paper && settings.borderless && settings.crop_to_fill);
+        assert_eq!(settings.default_fit(), Fit::Fill);
+    }
     #[test]
     fn photo_paper_defaults_to_borderless_and_preserves_saved_margins() {
         let mut settings = Settings::default();
@@ -374,12 +411,24 @@ mod tests {
             override_size: None,
             fit: Fit::Fill,
         };
-        assert_eq!(photo.size(Size::mm(90, 130)), Size::mm(90, 130));
-        photo.override_size = Some(Size::mm(40, 60));
-        assert_eq!(photo.size(Size::mm(100, 150)), Size::mm(40, 60));
+        assert_eq!(
+            photo.size(PrintSize::Fixed(Size::mm(90, 130))),
+            PrintSize::Fixed(Size::mm(90, 130))
+        );
+        photo.override_size = Some(PrintSize::Fixed(Size::mm(40, 60)));
+        assert_eq!(
+            photo.size(PrintSize::Fixed(Size::mm(100, 150))),
+            PrintSize::Fixed(Size::mm(40, 60))
+        );
         let mut copy = photo.clone();
         copy.override_size = None;
-        assert_eq!(copy.size(Size::mm(100, 150)), Size::mm(100, 150));
-        assert_eq!(photo.override_size, Some(Size::mm(40, 60)));
+        assert_eq!(
+            copy.size(PrintSize::Fixed(Size::mm(100, 150))),
+            PrintSize::Fixed(Size::mm(100, 150))
+        );
+        assert_eq!(
+            photo.override_size,
+            Some(PrintSize::Fixed(Size::mm(40, 60)))
+        );
     }
 }

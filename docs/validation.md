@@ -9,7 +9,7 @@
 - Printer geometry reconciliation, conflicting scaling, invalid paper, and empty jobs.
 - UI state transitions for selections, copies, removal, and size resets.
 - Workflow syntax and package structure, checksums, architecture, and executable smoke checks.
-- Photo-paper borderless defaults, full-page portrait/landscape layouts, preserved custom sizes, rejection of non-borderless printer geometry, and edge-to-edge PDF/raster coverage.
+- Photo-paper borderless defaults, full-page portrait/landscape layouts, mixed full-page/fixed-size jobs, rejection of non-borderless printer geometry, and edge-to-edge PDF/raster coverage.
 - Long-edge alignment for image pixels and print rectangles, equal extra spacing in rows, centered partial rows, and exact passport/ID and wallet preset sizes.
 - Recursive folder discovery, filename order, mixed-case extensions, duplicate paths, symlink cycles, empty/missing folders, and background loading with corrupt-image reporting.
 
@@ -29,14 +29,27 @@ Targets: macOS Intel, macOS Apple Silicon, Windows x64, Linux x64 on X11 and Way
 10. Print a physical sample at 100% with driver enlargement disabled; measure requested 100 × 150 mm rectangles and inspect image quality.
 11. Exercise missing/offline printers, no default printer, unsupported paper, and submission failure; verify the job is retained.
 12. Verify installer uninstall behavior and portable execution where applicable.
-13. Select 10 × 15 cm / 4 × 6 in paper and verify Photo paper and Borderless start enabled. For A4 photo stock, enable Photo paper explicitly. Verify Borderless can be turned off and normal margins return.
-14. Enable Full page with mixed image shapes and customized photo sizes. Verify one cropped photo per sheet, no cut lines, and coverage to every page edge. Switch orientation and paper size in both the app and print dialog; review any changed layout. Turn Full page off and verify custom sizes/crop choices return.
+13. Launch a new session and verify A4, Full page, Photo paper, Borderless, and Crop to fill defaults. Select ordinary and photo-paper presets and check stock-option behavior. Turn Borderless off and verify saved margins return.
+14. Mix Full page overrides with custom and standard fixed sizes. Verify full-page sheets appear first and omit guides; smaller prints share packed sheets. Change the default and reset selected overrides. Toggle Crop to fill for all photos, then override one photo with Fit whole image. Check both sheet orientations and print-dialog reflow.
 15. On a borderless-capable printer, check the initial borderless paper selection for the default printer, then switch printers and explicitly select a borderless mode if required. Print and measure an edge-to-edge photo. Check a printer/paper combination without borderless support: it must report unprintable margins and require settings changes rather than silently clip the job.
 16. Import a nested folder via Add folder, drag-and-drop, and a command-line path. Confirm only supported photos appear and other files are skipped. Confirm the window remains responsive and corrupt images are reported while valid photos load.
 17. Print landscape and portrait source images onto both sheet orientations. Check that image and photo-rectangle long edges follow the sheet's long edge, including in Full page mode. Choose passport/ID sizes and verify the physical cut dimensions.
 18. Add several equal-sized photos and change minimum margins/gaps. Check equal gaps across each row, balanced rows, centered partial rows, and unchanged physical photo sizes. Repeat with mixed sizes and the selected printer's actual margins.
 
-## Local results (2026-10-26)
+19. Resize to 800 × 560 and 1180 × 820. Check centered toolbar actions, right-aligned counts, narrow-window wrapping, readable Lucide icons, and padded thumbnail outlines with long filenames.
+20. Open About and verify PrintMarten branding, Piotr Wenta, the correct GitHub destination, GPL v3 text, and closing behavior.
+21. Check cut guides extend up to 3 mm, stop before neighboring photos or printable boundaries, and match PDF/raster output. Check grouped sizes do not needlessly increase sheets.
+22. On a clean Windows system, install Microsoft's x64 Visual C++ runtime separately, then verify installer/portable execution. Confirm no Microsoft runtime DLLs are bundled. Resolve/build the corresponding-source archive using its vendored Rust crates.
+
+## Current change validation (2026-10-26)
+
+- 36 Rust tests pass on Intel macOS, including the actual HEIC fixture, mixed jobs, crop/contain output, guide extension/clipping, grouping, SVG icon loading, and headless toolbar/About geometry at 800- and 1180-pixel widths.
+- Formatting and strict Clippy checks pass for all local targets.
+- cargo-about 0.8.2 validates the default-feature cross-platform license graph with `--locked --offline --fail`; the reviewed metadata inventory includes optional packages too. See [license-audit.md](license-audit.md).
+- The corresponding-source packager creates an archive with vendored dependencies and native source archives. It checks offline dependency resolution from the packaged vendor configuration before archiving.
+- Native GUI interaction, current Windows/Linux packaging, physical output, and a published CI run remain unverified for these changes.
+
+## Earlier baseline validation (2026-10-26, before these changes)
 
 - Intel macOS: all 27 tests pass, including the real libheif HEIC fixture, headless preview, PDF measurements, raster placement, photo-paper defaults, full-page borderless output, long-edge rotation, balanced spacing, photo presets, and recursive folder importing.
 - Formatting and strict Clippy checks pass. Workflow syntax passes actionlint; packaging scripts pass Python syntax checks.
