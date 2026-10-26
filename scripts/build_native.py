@@ -82,7 +82,9 @@ def main():
                           "OpenJPEG_DECODER", "OpenJPEG_ENCODER", "FFMPEG_DECODER",
                           "OpenH264_DECODER", "UVG266", "VVDEC", "VVENC"]:
                 flags.append(f"-DWITH_{codec}=OFF")
-        run(cmake, "-S", source, "-B", build, *common, *flags)
+        # CMake caches absolute source/build paths and compiler locations. CI may
+        # restore them under a different checkout path or runner image.
+        run(cmake, "--fresh", "-S", source, "-B", build, *common, *flags)
         run(cmake, "--build", build, "--config", "Release", "--parallel", "3")
         run(cmake, "--install", build, "--config", "Release")
         for candidate in ["COPYING", "COPYING.LESSER", "LICENSE"]:
