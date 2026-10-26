@@ -39,7 +39,7 @@ jobs:
       PRINTMARTEN_NATIVE_LIB_DIR: ${{ github.workspace }}/target/native/lib
       PRINTMARTEN_HEIC_FIXTURE: ${{ github.workspace }}/target/native-sources/libheif-1.23.1/examples/example.heic
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install Linux system dependencies
         if: runner.os == 'Linux'
         run: |
@@ -51,7 +51,7 @@ jobs:
           rustup toolchain install 1.99.0 --profile minimal --component rustfmt --component clippy
           rustup target add "${{ matrix.target }}" --toolchain 1.99.0
       - name: Cache Rust dependencies and build outputs
-        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             ~/.cargo/registry
@@ -113,7 +113,7 @@ jobs:
       - name: Validate packages
         run: python scripts/validate_packages.py --platform ${{ matrix.platform }} --arch ${{ matrix.arch }}
       - name: Upload application packages
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: PrintMarten-${{ matrix.platform }}-${{ matrix.arch }}-${{ github.sha }}
           path: dist/*
@@ -121,7 +121,7 @@ jobs:
           retention-days: 30
           compression-level: 0
       - name: Upload matching LGPL library sources
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: HEIC-sources-${{ matrix.platform }}-${{ matrix.arch }}-${{ github.sha }}
           path: target/native-sources/*.tar.gz
