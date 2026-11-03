@@ -65,7 +65,7 @@ struct Sheet {
 }
 
 /// Fixed-size photos in balanced rows, with equal extra space on every sheet.
-pub fn arrange(photos: &[Photo], settings: &Settings, hardware: Insets) -> Layout {
+fn arrange_rows(photos: &[Photo], settings: &Settings, hardware: Insets) -> Layout {
     let margins = hardware.max(Insets::uniform(settings.layout_margin()));
     let area = Rect {
         x: margins.left,
@@ -248,6 +248,230 @@ pub fn arrange(photos: &[Photo], settings: &Settings, hardware: Insets) -> Layou
     }
 }
 
+/// Bounded, deterministic multi-start MaxRects packing with a row baseline.
+pub fn arrange(photos: &[Photo], settings: &Settings, hardware: Insets) -> Layout {
+    let mut best = arrange_rows(photos, settings, hardware);
+    let m = hardware.max(Insets::uniform(settings.layout_margin()));
+    let area = Rect {
+        x: m.left,
+        y: m.top,
+        w: settings.paper.w - m.left - m.right,
+        h: settings.paper.h - m.top - m.bottom,
+    };
+    if area.w <= 0 || area.h <= 0 || !settings.paper.valid() {
+        return best;
+    }
+    let gap = settings.gap.max(0);
+    let mut fixed: Vec<_> = photos
+        .iter()
+        .filter_map(|p| match p.size(settings.default_size) {
+            PrintSize::Fixed(s) => Some((p, s)),
+            _ => None,
+        })
+        .collect();
+    let score = |l: &Layout| {
+        let edges: i64 = l
+            .pages
+            .iter()
+            .flat_map(|p| &p.photos)
+            .map(|p| {
+                let r = p.rect;
+                (if r.x == 0 { r.h } else { 0 })
+                    + (if r.y == 0 { r.w } else { 0 })
+                    + (if r.x + r.w == settings.paper.w {
+                        r.h
+                    } else {
+                        0
+                    })
+                    + (if r.y + r.h == settings.paper.h {
+                        r.w
+                    } else {
+                        0
+                    })
+            })
+            .sum();
+        (
+            l.rejected.len(),
+            l.pages.len(),
+            if settings.borderless { -edges } else { 0 },
+        )
+    };
+    for order in 0..4 {
+        fixed.sort_by_key(|(p, s)| {
+            (
+                std::cmp::Reverse(match order {
+                    0 => s.w * s.h,
+                    1 => s.w.max(s.h),
+                    2 => s.w.min(s.h),
+                    _ => s.w + s.h,
+                }),
+                p.id,
+            )
+        });
+        for heuristic in 0..2 {
+            let mut pages: Vec<Page> = Vec::new();
+            let mut free: Vec<Vec<Rect>> = Vec::new();
+            let mut rejected = Vec::new();
+            for &(photo, size) in &fixed {
+                if !size.valid()
+                    || ![size, size.rotated()]
+                        .iter()
+                        .any(|s| s.w <= area.w && s.h <= area.h)
+                {
+                    rejected.push(photo.id);
+                    continue;
+                }
+                let mut choice = None;
+                let fresh = [Rect {
+                    w: area.w + gap,
+                    h: area.h + gap,
+                    ..area
+                }];
+                for (page, spaces) in free
+                    .iter()
+                    .map(Vec::as_slice)
+                    .chain(std::iter::once(fresh.as_slice()))
+                    .enumerate()
+                {
+                    for r in spaces {
+                        for s in [size, size.rotated()] {
+                            let (w, h) = (s.w + gap, s.h + gap);
+                            if w > r.w || h > r.h {
+                                continue;
+                            }
+                            let rank = (
+                                page,
+                                if heuristic == 0 {
+                                    (r.w - w).min(r.h - h)
+                                } else {
+                                    r.w * r.h - w * h
+                                },
+                                (r.w - w).max(r.h - h),
+                                r.y,
+                                r.x,
+                                s.w,
+                            );
+                            if choice.as_ref().is_none_or(|(old, _)| rank < *old) {
+                                choice = Some((
+                                    rank,
+                                    Rect {
+                                        x: r.x,
+                                        y: r.y,
+                                        w: s.w,
+                                        h: s.h,
+                                    },
+                                ));
+                            }
+                        }
+                    }
+                    if choice.is_some() {
+                        break;
+                    }
+                }
+                let (rank, r) = choice.unwrap();
+                let page = rank.0;
+                if page == pages.len() {
+                    pages.push(Page::default());
+                    free.push(vec![Rect {
+                        w: area.w + gap,
+                        h: area.h + gap,
+                        ..area
+                    }]);
+                }
+                let used = Rect {
+                    w: r.w + gap,
+                    h: r.h + gap,
+                    ..r
+                };
+                let mut next = Vec::new();
+                for f in free[page].drain(..) {
+                    if !f.intersects(used) {
+                        next.push(f);
+                        continue;
+                    }
+                    if used.x > f.x {
+                        next.push(Rect {
+                            w: used.x - f.x,
+                            ..f
+                        });
+                    }
+                    if used.y > f.y {
+                        next.push(Rect {
+                            h: used.y - f.y,
+                            ..f
+                        });
+                    }
+                    if used.x + used.w < f.x + f.w {
+                        next.push(Rect {
+                            x: used.x + used.w,
+                            w: f.x + f.w - used.x - used.w,
+                            ..f
+                        });
+                    }
+                    if used.y + used.h < f.y + f.h {
+                        next.push(Rect {
+                            y: used.y + used.h,
+                            h: f.y + f.h - used.y - used.h,
+                            ..f
+                        });
+                    }
+                }
+                free[page] = next
+                    .iter()
+                    .enumerate()
+                    .filter(|(i, a)| {
+                        !next.iter().enumerate().any(|(j, b)| {
+                            j != *i
+                                && b.x <= a.x
+                                && b.y <= a.y
+                                && b.x + b.w >= a.x + a.w
+                                && b.y + b.h >= a.y + a.h
+                                && (a != &b || j < *i)
+                        })
+                    })
+                    .map(|(_, r)| *r)
+                    .collect();
+                pages[page].photos.push(Placement {
+                    photo_id: photo.id,
+                    source: photo.source,
+                    rect: r,
+                    rotated: rotate_image(photo, Size { w: r.w, h: r.h }),
+                    fit: photo.fit,
+                });
+            }
+            let mut candidate = arrange_rows(
+                &photos
+                    .iter()
+                    .filter(|p| p.size(settings.default_size) == PrintSize::FullPage)
+                    .cloned()
+                    .collect::<Vec<_>>(),
+                settings,
+                hardware,
+            );
+            for page in &mut pages {
+                if settings.cut_lines {
+                    page.cut_lines = cutting_guides(&page.photos, area);
+                }
+            }
+            candidate.pages.extend(pages);
+            candidate.rejected.extend(rejected);
+            candidate.rejected.sort_unstable();
+            if score(&candidate) < score(&best) {
+                best = candidate;
+            }
+        }
+    }
+    if settings.borderless {
+        for page in &mut best.pages {
+            page.cut_lines.retain(|l| {
+                !((l.start[0] == l.end[0] && [0, settings.paper.w].contains(&l.start[0]))
+                    || (l.start[1] == l.end[1] && [0, settings.paper.h].contains(&l.start[1])))
+            });
+        }
+    }
+    best
+}
+
 /// Extend edge guides by up to 3 mm without crossing another print or the printable area.
 fn cutting_guides(photos: &[Placement], area: Rect) -> Vec<CutLine> {
     let mut lines = BTreeSet::new();
@@ -331,6 +555,28 @@ pub fn image_geometry(image: (u32, u32), target: (f64, f64), fit: Fit) -> ([f32;
 mod tests {
     use super::*;
     #[test]
+    fn two_thirteen_by_eighteen_photos_share_a4_and_touch_edges() {
+        for paper in [Size::mm(210, 297), Size::mm(297, 210)] {
+            let settings = Settings {
+                paper,
+                default_size: PrintSize::Fixed(Size::mm(130, 180)),
+                ..Settings::default()
+            };
+            let mut input = photos(2, None);
+            for p in &mut input {
+                p.source_landscape = true;
+            }
+            let result = arrange(&input, &settings, Insets::default());
+            assert_eq!(result.pages.len(), 1);
+            assert_eq!(result.pages[0].photos.len(), 2);
+            for p in &result.pages[0].photos {
+                assert_eq!(p.rect.w * p.rect.h, 130000 * 180000);
+                assert!(p.rect.x == 0 || p.rect.y == 0);
+                assert_eq!(p.rotated, p.rect.w < p.rect.h);
+            }
+        }
+    }
+    #[test]
     fn mixed_full_page_and_fixed_sizes_keep_fits_and_suppress_only_full_page_guides() {
         for paper in [Size::mm(100, 150), Size::mm(150, 100)] {
             let settings = Settings {
@@ -399,13 +645,7 @@ mod tests {
         let layout = arrange(&input, &settings, Insets::default());
         assert_eq!(layout.pages.len(), 1);
         let page = &layout.pages[0];
-        for p in &page.photos {
-            for q in &page.photos {
-                if p.rect.y == q.rect.y {
-                    assert_eq!((p.rect.w, p.rect.h), (q.rect.w, q.rect.h));
-                }
-            }
-        }
+        assert_eq!(page.photos.len(), 6);
         let mut reversed = input.clone();
         reversed.reverse();
         assert_eq!(layout, arrange(&reversed, &settings, Insets::default()));
@@ -518,13 +758,12 @@ mod tests {
             2
         );
         settings.default_size = PrintSize::Fixed(Size::mm(100, 150));
-        // Long edges stay parallel to the portrait sheet, even when rotating
-        // a rectangle would allow a more compact arrangement.
+        // Independent rotations avoid an unnecessary sheet.
         assert_eq!(
             arrange(&photos(2, None), &settings, Insets::default())
                 .pages
                 .len(),
-            2
+            1
         );
     }
     #[test]
@@ -549,8 +788,13 @@ mod tests {
                         };
                         let layout = arrange(&photos, &settings, Insets::default());
                         for placement in layout.pages.iter().flat_map(|page| &page.photos) {
-                            assert_eq!(placement.rect.w > placement.rect.h, paper.w > paper.h);
-                            assert_eq!(placement.rotated, source_landscape != (paper.w > paper.h));
+                            if full_page {
+                                assert_eq!(placement.rect.w > placement.rect.h, paper.w > paper.h);
+                            }
+                            assert_eq!(
+                                placement.rotated,
+                                source_landscape != (placement.rect.w > placement.rect.h)
+                            );
                             if !full_page {
                                 assert_eq!(placement.rect.w * placement.rect.h, size.w * size.h);
                             }

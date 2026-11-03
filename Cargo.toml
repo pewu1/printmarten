@@ -9,6 +9,7 @@ authors = ["Piotr Wenta"]
 repository = "https://github.com/pewu1/printmarten"
 
 [dependencies]
+winit = { version = "0.30.13", default-features = false }
 anyhow = "1.0"
 eframe = { version = "0.33", default-features = false, features = ["glow", "x11", "wayland", "default_fonts"] }
 egui_extras = { version = "0.33", default-features = false, features = ["svg"] }
@@ -22,6 +23,7 @@ serde_json = "1.0"
 tempfile = "3.0"
 
 [target.'cfg(target_os = "macos")'.dependencies]
+muda = { version = "0.17", default-features = false }
 objc2 = "0.6"
 objc2-foundation = { version = "0.3", features = ["NSData", "NSString", "NSGeometry"] }
 

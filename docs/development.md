@@ -105,3 +105,24 @@ codec source archives, assets, and build/install scripts. CI publishes this arch
 with its checksum beside binary downloads. Keep it available for as long as the
 matching binaries are distributed. System SDKs and general-purpose build tools
 remain prerequisites.
+
+## One-command local packages
+
+Run on the matching native OS and CPU (cross compilation is not supported):
+
+- Intel macOS: `./scripts/build-macos-intel.sh`
+- Apple Silicon macOS: `./scripts/build-macos-apple-silicon.sh`
+- Windows x64, from a Visual Studio x64 developer PowerShell: `./scripts/build-windows-x64.ps1`
+- Linux x64: `./scripts/build-linux-x64.sh`
+
+Install Python 3, the pinned Rust toolchain, and the OS dependencies listed above.
+Windows additionally needs NSIS on PATH. Scripts create `target/local-tools`,
+build the pinned HEIC runtime and release executable, generate license notices,
+and package and validate the artifacts in `dist/`. The macOS DMGs are ad-hoc
+signed. No publishing or notarization is performed. Network access is needed
+for tools and pinned source downloads on the first build.
+
+On Linux, PrintMarten selects X11 (XWayland on a Wayland desktop) whenever
+DISPLAY is present, because winit 0.30 does not deliver native Wayland file drops.
+On Wayland-only systems the application still starts, but use Add photos/folder
+instead of dropping files. GTK printing continues to use its own helper process.

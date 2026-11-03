@@ -345,6 +345,8 @@ mod tests {
         }];
         let settings = Settings {
             paper: Size::mm(50, 60),
+            borderless: false,
+            margin: 0,
             cut_lines: true,
             default_size: PrintSize::Fixed(Size::mm(20, 30)),
             ..Settings::default()

@@ -38,6 +38,19 @@ fn main() -> anyhow::Result<()> {
                 height: icon.height(),
                 rgba: icon.into_raw(),
             }),
+        event_loop_builder: Some(Box::new(|builder| {
+            #[cfg(target_os = "macos")]
+            {
+                use winit::platform::macos::EventLoopBuilderExtMacOS;
+                builder.with_default_menu(false);
+            }
+            #[cfg(target_os = "linux")]
+            if std::env::var_os("DISPLAY").is_some() {
+                use winit::platform::x11::EventLoopBuilderExtX11;
+                builder.with_x11();
+            }
+            let _ = builder;
+        })),
         ..Default::default()
     };
     eframe::run_native(

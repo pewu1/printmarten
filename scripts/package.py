@@ -38,6 +38,7 @@ def notices(destination, native):
     destination.mkdir(parents=True, exist_ok=True)
     for name in ["LICENSE", "THIRD_PARTY_NOTICES.md", "README.md"]:
         shutil.copy2(ROOT / name, destination / name)
+    shutil.copy2(ROOT / "assets/fonts/LICENSE", destination / "NotoSans-LICENSE.txt")
     shutil.copytree(native / "share/printmarten/licenses", destination / "native-licenses", dirs_exist_ok=True)
     shutil.copy2(native / "versions.json", destination / "native-versions.json")
     # cargo-about emits the actual license texts of the locked Rust dependencies.

@@ -47,6 +47,8 @@ enum ImportEvent {
 }
 
 pub struct App {
+    #[cfg(all(target_os = "macos", not(test)))]
+    menu: NativeMenu,
     brand_icon: egui::TextureHandle,
     settings: Settings,
     photos: Vec<Photo>,
@@ -69,11 +71,71 @@ pub struct App {
     last_fixed_size: Size,
     about_open: bool,
 }
+#[cfg(all(target_os = "macos", not(test)))]
+struct NativeMenu {
+    _menu: muda::Menu,
+    submenu: muda::Submenu,
+    items: Vec<muda::MenuItem>,
+    change_visible: bool,
+}
+#[cfg(all(target_os = "macos", not(test)))]
+impl NativeMenu {
+    fn new(ctx: egui::Context) -> Self {
+        let menu = muda::Menu::new();
+        let submenu = muda::Submenu::new("PrintMarten", true);
+        let items: Vec<_> = [
+            "Add photos…",
+            "Add folder…",
+            "Clear job",
+            "Print…",
+            "About",
+            "Change printer…",
+        ]
+        .iter()
+        .enumerate()
+        .map(|(i, label)| muda::MenuItem::with_id(i.to_string(), label, true, None))
+        .collect();
+        for item in &items[..5] {
+            submenu.append(item).unwrap();
+        }
+        submenu
+            .append(&muda::PredefinedMenuItem::quit(None))
+            .unwrap();
+        menu.append(&submenu).unwrap();
+        menu.init_for_nsapp();
+        muda::MenuEvent::set_event_handler(Some(move |event: muda::MenuEvent| {
+            COMMANDS.lock().unwrap().push(event.id.0);
+            ctx.request_repaint();
+        }));
+        Self {
+            _menu: menu,
+            submenu,
+            items,
+            change_visible: false,
+        }
+    }
+}
+#[cfg(all(target_os = "macos", not(test)))]
+static COMMANDS: std::sync::Mutex<Vec<String>> = std::sync::Mutex::new(Vec::new());
 impl App {
     pub fn new(cc: &eframe::CreationContext<'_>, paths: Vec<PathBuf>) -> Self {
         Self::from_context(&cc.egui_ctx, paths)
     }
     fn from_context(context: &egui::Context, paths: Vec<PathBuf>) -> Self {
+        let mut fonts = egui::FontDefinitions::default();
+        fonts.font_data.insert(
+            "Noto Sans".into(),
+            egui::FontData::from_static(include_bytes!("../assets/fonts/NotoSans-Regular.ttf"))
+                .into(),
+        );
+        for family in [egui::FontFamily::Proportional, egui::FontFamily::Monospace] {
+            fonts
+                .families
+                .entry(family)
+                .or_default()
+                .insert(0, "Noto Sans".into());
+        }
+        context.set_fonts(fonts);
         egui_extras::install_image_loaders(context);
         let mut style = (*context.style()).clone();
         style.spacing.item_spacing = Vec2::new(10.0, 8.0);
@@ -119,6 +181,8 @@ impl App {
         let settings = Settings::default();
         let layout = layout::arrange(&[], &settings, Insets::default());
         let mut app = Self {
+            #[cfg(all(target_os = "macos", not(test)))]
+            menu: NativeMenu::new(context.clone()),
             brand_icon,
             settings,
             photos: vec![],
@@ -143,6 +207,37 @@ impl App {
         };
         app.queue(paths);
         app
+    }
+    fn add_photos(&mut self) {
+        if let Some(paths) = rfd::FileDialog::new()
+            .add_filter("Photos", importing::IMAGE_EXTENSIONS)
+            .pick_files()
+        {
+            self.queue(paths);
+        }
+    }
+    fn add_folder(&mut self) {
+        if let Some(paths) = rfd::FileDialog::new().pick_folders() {
+            self.queue(paths);
+        }
+    }
+    fn can_print(&self) -> bool {
+        self.pending == 0
+            && !self.photos.is_empty()
+            && self.layout.rejected.is_empty()
+            && self.editor.is_none()
+    }
+    fn clear_job(&mut self) {
+        self.photos.clear();
+        self.sources.clear();
+        self.textures.clear();
+        self.selection.clear();
+        self.memory = 0;
+        self.prepared = None;
+        self.editor = None;
+        self.notice.clear();
+        self.errors.clear();
+        self.rebuild();
     }
     fn queue(&mut self, paths: Vec<PathBuf>) {
         if !paths.is_empty() && self.import.send(paths).is_ok() {
@@ -377,22 +472,18 @@ impl App {
     }
     fn toolbar_actions(&mut self, ui: &mut egui::Ui) -> bool {
         let mut print = false;
-        ui.horizontal(|ui| {
+        ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
             if ui
                 .add(ui_icons::button(ui, Icon::AddPhotos, "Add photos…"))
                 .clicked()
-                && let Some(paths) = rfd::FileDialog::new()
-                    .add_filter("Photos", importing::IMAGE_EXTENSIONS)
-                    .pick_files()
             {
-                self.queue(paths);
+                self.add_photos();
             }
             if ui
                 .add(ui_icons::button(ui, Icon::AddFolder, "Add folder…"))
                 .clicked()
-                && let Some(paths) = rfd::FileDialog::new().pick_folders()
             {
-                self.queue(paths);
+                self.add_folder();
             }
             if ui
                 .add_enabled(
@@ -401,22 +492,14 @@ impl App {
                 )
                 .clicked()
             {
-                self.photos.clear();
-                self.sources.clear();
-                self.textures.clear();
-                self.selection.clear();
-                self.memory = 0;
-                self.dirty = true;
+                self.clear_job();
             }
             let label = if self.prepared.is_some() {
                 "Print reviewed layout"
             } else {
                 "Print…"
             };
-            let enabled = self.pending == 0
-                && !self.photos.is_empty()
-                && self.layout.rejected.is_empty()
-                && self.editor.is_none();
+            let enabled = self.can_print();
             if ui
                 .add_enabled(
                     enabled,
@@ -535,24 +618,28 @@ impl App {
             .default_width(440.0)
             .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
             .show(ctx, |ui| {
-                self.brand(ui);
-                ui.label(format!("Version {}", env!("CARGO_PKG_VERSION")));
-                ui.label("Author: Piotr Wenta");
-                ui.horizontal(|ui| {
-                    ui.add(Icon::Link.image(ui.visuals().text_color()));
-                    ui.hyperlink_to("PrintMarten on GitHub", env!("CARGO_PKG_REPOSITORY"));
-                });
-                ui.separator();
-                ui.label("Licensed under GNU GPL v3 (GPL-3.0-only)");
-                egui::ScrollArea::vertical()
-                    .id_salt("about-license")
-                    .max_height(240.0)
-                    .show(ui, |ui| {
-                        ui.add(egui::Label::new(include_str!("../LICENSE")).wrap());
+                ui.vertical_centered(|ui| {
+                    ui.allocate_ui(Vec2::new(235.0, 48.0), |ui| self.brand(ui));
+                    ui.label(format!("Version {}", env!("CARGO_PKG_VERSION")));
+                    ui.label("Author: Piotr Wenta");
+                    ui.allocate_ui(Vec2::new(190.0, 24.0), |ui| {
+                        ui.horizontal(|ui| {
+                            ui.add(Icon::Link.image(ui.visuals().text_color()));
+                            ui.hyperlink_to("PrintMarten on GitHub", env!("CARGO_PKG_REPOSITORY"));
+                        });
                     });
-                if ui.add(ui_icons::button(ui, Icon::Close, "Close")).clicked() {
-                    self.about_open = false;
-                }
+                    ui.separator();
+                    ui.label("Licensed under GNU GPL v3 (GPL-3.0-only)");
+                    egui::ScrollArea::vertical()
+                        .id_salt("about-license")
+                        .max_height(240.0)
+                        .show(ui, |ui| {
+                            ui.add(egui::Label::new(include_str!("../LICENSE")).wrap());
+                        });
+                    if ui.add(ui_icons::button(ui, Icon::Close, "Close")).clicked() {
+                        self.about_open = false;
+                    }
+                });
             });
         self.about_open &= open;
     }
@@ -703,7 +790,11 @@ impl App {
                 self.dirty = true;
             }
         });
-        ui.small("Extra space is shared evenly between photos and rows.");
+        ui.small(if self.settings.borderless {
+            "Photos prefer sheet edges; fewer sheets takes priority."
+        } else {
+            "Photos are packed at their exact size with minimum spacing."
+        });
         if ui
             .add_enabled(
                 packed,
@@ -713,7 +804,8 @@ impl App {
         {
             self.dirty = true;
         }
-        ui.separator();
+    }
+    fn photo_controls(&mut self, ui: &mut egui::Ui) {
         ui_icons::heading(ui, Icon::Photos, &format!("Photos ({})", self.photos.len()));
         ui.small("Ctrl/Cmd-click to select several.\nRight-click a photo for sizes and copies.");
         if !self.selection.is_empty() {
@@ -823,10 +915,14 @@ impl App {
         }
         let mut action = None;
         let mut select = None;
+        let viewport = ui.available_size();
+        let fit_scale = ((viewport.x - 20.0) / self.layout.paper.w as f32)
+            .min((viewport.y - 50.0) / self.layout.paper.h as f32)
+            .max(0.00001);
         egui::ScrollArea::both()
             .auto_shrink([false, false])
             .show(ui, |ui| {
-                let width = ((ui.available_width() - 40.0).clamp(200.0, 900.0)) * self.zoom;
+                let width = self.layout.paper.w as f32 * fit_scale * self.zoom;
                 let scale = width / self.layout.paper.w as f32;
                 let height = self.layout.paper.h as f32 * scale;
                 for (index, page) in self.layout.pages.iter().enumerate() {
@@ -835,8 +931,11 @@ impl App {
                         index + 1,
                         self.layout.pages.len()
                     ));
-                    let (sheet, _) =
-                        ui.allocate_exact_size(Vec2::new(width, height), egui::Sense::hover());
+                    let (space, _) = ui.allocate_exact_size(
+                        Vec2::new(width.max(ui.available_width()), height),
+                        egui::Sense::hover(),
+                    );
+                    let sheet = Rect::from_center_size(space.center(), Vec2::new(width, height));
                     ui.painter().rect_filled(sheet, 0.0, Color32::WHITE);
                     ui.painter().rect_stroke(
                         sheet,
@@ -1089,12 +1188,46 @@ impl eframe::App for App {
         if self.dirty {
             self.rebuild();
         }
+        #[cfg(all(target_os = "macos", not(test)))]
+        {
+            self.menu.items[2].set_enabled(self.pending == 0 && !self.photos.is_empty());
+            self.menu.items[3].set_enabled(self.can_print());
+            self.menu.items[3].set_text(if self.prepared.is_some() {
+                "Print reviewed layout"
+            } else {
+                "Print…"
+            });
+            let visible = self.prepared.is_some();
+            if visible != self.menu.change_visible {
+                if visible {
+                    self.menu.submenu.insert(&self.menu.items[5], 4).unwrap();
+                } else {
+                    self.menu.submenu.remove(&self.menu.items[5]).unwrap();
+                }
+                self.menu.change_visible = visible;
+            }
+            let commands = std::mem::take(&mut *COMMANDS.lock().unwrap());
+            for id in commands {
+                match id.as_str() {
+                    "0" => self.add_photos(),
+                    "1" => self.add_folder(),
+                    "2" if self.pending == 0 => self.clear_job(),
+                    "3" if self.can_print() => self.print(),
+                    "4" => self.about_open = true,
+                    "5" if self.can_print() => {
+                        self.prepared = None;
+                        self.print();
+                    }
+                    _ => {}
+                }
+            }
+        }
         let mut print = false;
         egui::TopBottomPanel::top("toolbar").show(ctx, |ui| {
             print = self.toolbar(ui);
         });
         egui::TopBottomPanel::bottom("status").show(ctx,|ui| {
-            ui.horizontal(|ui|{ui.add(Icon::Zoom.image(ui.visuals().text_color()));ui.label("Preview zoom");ui.add(egui::Slider::new(&mut self.zoom,0.3..=2.0).show_value(false));ui.small("Photo sizes stay exact regardless of preview zoom.");});
+            ui.horizontal(|ui|{ui.add(Icon::Zoom.image(ui.visuals().text_color()));ui.label("Preview zoom");if ui.button("Fit sheet").clicked(){self.zoom=1.0;}ui.add(egui::Slider::new(&mut self.zoom,0.3..=2.0).custom_formatter(|v,_| format!("{:.0}%",v*100.0)));ui.small("Photo sizes stay exact regardless of preview zoom.");});
             if !self.notice.is_empty(){ui.label(&self.notice);}
             if !self.layout.rejected.is_empty() {
                 ui.colored_label(Color32::DARK_RED,format!("{} photo(s) do not fit. Choose a larger sheet or a smaller photo size. Nothing will be shrunk.",self.layout.rejected.len()));
@@ -1118,8 +1251,18 @@ impl eframe::App for App {
                     .id_salt("sheet-controls")
                     .show(ui, |ui| {
                         self.controls(ui);
-                        self.thumbnails(ui);
                     });
+            });
+        if self.dirty {
+            self.rebuild();
+        }
+        egui::SidePanel::right("photos")
+            .default_width(240.0)
+            .width_range(180.0..=400.0)
+            .resizable(true)
+            .show(ctx, |ui| {
+                self.photo_controls(ui);
+                self.thumbnails(ui);
             });
         if self.dirty {
             self.rebuild();
@@ -1190,6 +1333,19 @@ mod tests {
         app.next_id = 4;
         app.rebuild();
         (context, app)
+    }
+    #[test]
+    fn clearing_job_keeps_settings_and_renders_the_next_frame() {
+        let (ctx, mut app) = app();
+        let settings = app.settings.clone();
+        app.clear_job();
+        assert!(app.photos.is_empty() && app.sources.is_empty() && app.layout.pages.is_empty());
+        assert_eq!(app.settings, settings);
+        let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            egui::CentralPanel::default().show(ctx, |ui| app.preview(ui));
+        });
+        app.queue(Vec::new());
+        assert_eq!(app.pending, 0);
     }
     #[test]
     fn global_crop_updates_current_photos_but_individual_changes_and_copies_are_independent() {

@@ -26,8 +26,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--platform", required=True)
     parser.add_argument("--arch", required=True)
+    parser.add_argument("--sha", help="Validate only this build suffix")
     options = parser.parse_args()
-    packages = [p for p in (ROOT / "dist").glob(f"*{options.platform}-{options.arch}*") if p.suffix != ".sha256"]
+    packages = [p for p in (ROOT / "dist").glob(f"*{options.platform}-{options.arch}*") if p.suffix != ".sha256" and (not options.sha or f"-{options.sha[:8]}" in p.name)]
     expected = 1 if options.platform == "macos" else 2
     if len(packages) != expected:
         raise RuntimeError(f"Expected {expected} packages, found {packages}")
