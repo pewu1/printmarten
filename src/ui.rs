@@ -245,17 +245,21 @@ impl App {
         }
     }
     fn brand(&self, ui: &mut egui::Ui) {
-        ui.horizontal(|ui| {
-            ui.add(
-                egui::Image::new((self.brand_icon.id(), Vec2::splat(48.0)))
-                    .alt_text("PrintMarten icon"),
-            );
-            ui.heading(
-                egui::RichText::new("PrintMarten")
-                    .size(28.0)
-                    .color(Color32::from_rgb(0, 115, 170)),
-            );
-        });
+        ui.allocate_ui_with_layout(
+            Vec2::new(ui.available_width(), 48.0),
+            egui::Layout::left_to_right(egui::Align::Center),
+            |ui| {
+                ui.add(
+                    egui::Image::new((self.brand_icon.id(), Vec2::splat(48.0)))
+                        .alt_text("PrintMarten icon"),
+                );
+                ui.heading(
+                    egui::RichText::new("PrintMarten")
+                        .size(28.0)
+                        .color(Color32::from_rgb(0, 115, 170)),
+                );
+            },
+        );
     }
     fn poll_import(&mut self, ctx: &egui::Context) {
         for _ in 0..16 {
@@ -573,22 +577,33 @@ impl App {
                 {
                     self.about_open = true;
                 }
-                ui.vertical(|ui| {
-                    ui.horizontal(|ui| {
-                        ui.add(Icon::Photos.image(ui.visuals().text_color()));
-                        ui.label(format!(
-                            "{} photos · {} sheets",
-                            self.photos.len(),
-                            self.layout.pages.len()
-                        ));
-                    });
-                    if self.pending > 0 {
+                let row_height = ui.text_style_height(&egui::TextStyle::Body).max(17.0);
+                let height = if self.pending > 0 {
+                    row_height * 2.0 + ui.spacing().item_spacing.y
+                } else {
+                    row_height
+                };
+                ui.allocate_ui_with_layout(
+                    Vec2::new(ui.available_width(), height),
+                    egui::Layout::top_down(egui::Align::Min),
+                    |ui| {
+                        ui.spacing_mut().interact_size.y = row_height;
                         ui.horizontal(|ui| {
-                            ui.spinner();
-                            ui.small(format!("Importing {}…", self.pending));
+                            ui.add(Icon::Photos.image(ui.visuals().text_color()));
+                            ui.label(format!(
+                                "{} photos · {} sheets",
+                                self.photos.len(),
+                                self.layout.pages.len()
+                            ));
                         });
-                    }
-                });
+                        if self.pending > 0 {
+                            ui.horizontal(|ui| {
+                                ui.spinner();
+                                ui.small(format!("Importing {}…", self.pending));
+                            });
+                        }
+                    },
+                );
             },
         );
         let action_area = if two_rows {
@@ -623,7 +638,7 @@ impl App {
                     ui.label(format!("Version {}", env!("CARGO_PKG_VERSION")));
                     ui.label("Author: Piotr Wenta");
                     ui.allocate_ui(Vec2::new(190.0, 24.0), |ui| {
-                        ui.horizontal(|ui| {
+                        ui_icons::row(ui, |ui| {
                             ui.add(Icon::Link.image(ui.visuals().text_color()));
                             ui.hyperlink_to("PrintMarten on GitHub", env!("CARGO_PKG_REPOSITORY"));
                         });
@@ -670,7 +685,7 @@ impl App {
                 }
             });
         ui.small(size_label(self.settings.paper));
-        ui.horizontal(|ui| {
+        ui_icons::row(ui, |ui| {
             let landscape = self.settings.paper.w > self.settings.paper.h;
             if ui
                 .add(ui_icons::button(ui, Icon::Portrait, "Portrait").selected(!landscape))
@@ -758,7 +773,7 @@ impl App {
         ui_icons::heading(ui, Icon::Scissors, "Spacing");
         let mut margin = self.settings.margin as f64 / 1000.0;
         let mut gap = self.settings.gap as f64 / 1000.0;
-        ui.horizontal(|ui| {
+        ui_icons::row(ui, |ui| {
             ui.label("Min. margin");
             if ui
                 .add_enabled(
@@ -774,7 +789,7 @@ impl App {
                 self.dirty = true;
             }
         });
-        ui.horizontal(|ui| {
+        ui_icons::row(ui, |ui| {
             ui.label("Min. gap");
             if ui
                 .add_enabled(
@@ -809,7 +824,7 @@ impl App {
         ui_icons::heading(ui, Icon::Photos, &format!("Photos ({})", self.photos.len()));
         ui.small("Ctrl/Cmd-click to select several.\nRight-click a photo for sizes and copies.");
         if !self.selection.is_empty() {
-            ui.horizontal(|ui| {
+            ui_icons::row(ui, |ui| {
                 if ui.add(ui_icons::button(ui, Icon::Copy, "Copy")).clicked() {
                     self.action(Action::Copy);
                 }
@@ -848,32 +863,36 @@ impl App {
                         .show(ui, |ui| {
                             let width = ui.available_width();
                             ui.set_min_width(width);
-                            ui.horizontal(|ui| {
-                                ui.add(
-                                    egui::Image::new((
-                                        self.textures[photo.source].normal.id(),
-                                        Vec2::splat(54.0),
-                                    ))
-                                    .fit_to_exact_size(Vec2::splat(54.0)),
-                                );
-                                ui.vertical(|ui| {
-                                    let label = source
-                                        .path
-                                        .file_name()
-                                        .unwrap_or_default()
-                                        .to_string_lossy();
-                                    ui.add(egui::Label::new(label).truncate());
-                                    ui.small(format!(
-                                        "{}{}",
-                                        photo.size(self.settings.default_size).label(),
-                                        if photo.override_size.is_some() {
-                                            " •"
-                                        } else {
-                                            ""
-                                        }
-                                    ));
-                                });
-                            });
+                            ui.allocate_ui_with_layout(
+                                Vec2::new(ui.available_width(), 54.0),
+                                egui::Layout::left_to_right(egui::Align::Center),
+                                |ui| {
+                                    ui.add(
+                                        egui::Image::new((
+                                            self.textures[photo.source].normal.id(),
+                                            Vec2::splat(54.0),
+                                        ))
+                                        .fit_to_exact_size(Vec2::splat(54.0)),
+                                    );
+                                    ui.vertical(|ui| {
+                                        let label = source
+                                            .path
+                                            .file_name()
+                                            .unwrap_or_default()
+                                            .to_string_lossy();
+                                        ui.add(egui::Label::new(label).truncate());
+                                        ui.small(format!(
+                                            "{}{}",
+                                            photo.size(self.settings.default_size).label(),
+                                            if photo.override_size.is_some() {
+                                                " •"
+                                            } else {
+                                                ""
+                                            }
+                                        ));
+                                    });
+                                },
+                            );
                         })
                         .response
                         .interact(egui::Sense::click());
@@ -1090,18 +1109,18 @@ impl App {
                         editor.error = "Enter valid dimensions before changing units".into();
                     }
                 }
-                ui.horizontal(|ui| {
+                ui_icons::row(ui, |ui| {
                     ui.label("Width");
                     ui.text_edit_singleline(&mut editor.width);
                 });
-                ui.horizontal(|ui| {
+                ui_icons::row(ui, |ui| {
                     ui.label("Height");
                     ui.text_edit_singleline(&mut editor.height);
                 });
                 if !editor.error.is_empty() {
                     ui.colored_label(Color32::DARK_RED, &editor.error);
                 }
-                ui.horizontal(|ui| {
+                ui_icons::row(ui, |ui| {
                     if ui.add(ui_icons::button(ui, Icon::Check, "Apply")).clicked() {
                         match editor
                             .unit
@@ -1227,7 +1246,7 @@ impl eframe::App for App {
             print = self.toolbar(ui);
         });
         egui::TopBottomPanel::bottom("status").show(ctx,|ui| {
-            ui.horizontal(|ui|{ui.add(Icon::Zoom.image(ui.visuals().text_color()));ui.label("Preview zoom");if ui.button("Fit sheet").clicked(){self.zoom=1.0;}ui.add(egui::Slider::new(&mut self.zoom,0.3..=2.0).custom_formatter(|v,_| format!("{:.0}%",v*100.0)));ui.small("Photo sizes stay exact regardless of preview zoom.");});
+            ui_icons::row(ui, |ui|{ui.add(Icon::Zoom.image(ui.visuals().text_color()));ui.label("Preview zoom");if ui.button("Fit sheet").clicked(){self.zoom=1.0;}ui.add(egui::Slider::new(&mut self.zoom,0.3..=2.0).custom_formatter(|v,_| format!("{:.0}%",v*100.0)));ui.small("Photo sizes stay exact regardless of preview zoom.");});
             if !self.notice.is_empty(){ui.label(&self.notice);}
             if !self.layout.rejected.is_empty() {
                 ui.colored_label(Color32::DARK_RED,format!("{} photo(s) do not fit. Choose a larger sheet or a smaller photo size. Nothing will be shrunk.",self.layout.rejected.len()));
@@ -1242,7 +1261,7 @@ impl eframe::App for App {
             }
             let low=self.layout.pages.iter().flat_map(|p|&p.photos).filter(|p|imaging::effective_dpi(self.sources[p.source].pixels.dimensions(),p)<150.0).count();
             if low>0{ui.colored_label(Color32::from_rgb(150,90,0),format!("{low} photo(s) are below 150 DPI at the requested size and may look soft."));}
-            if !self.errors.is_empty(){ui.horizontal(|ui|{ui.add(Icon::Warning.image(Color32::DARK_RED));ui.colored_label(Color32::DARK_RED,format!("{} problem(s)",self.errors.len()));if ui.add(ui_icons::button(ui, Icon::Close, "Dismiss")).clicked(){self.errors.clear();}});egui::ScrollArea::vertical().id_salt("errors").max_height(90.0).show(ui,|ui|for error in &self.errors {ui.colored_label(Color32::DARK_RED,error);});}
+            if !self.errors.is_empty(){ui_icons::row(ui, |ui|{ui.add(Icon::Warning.image(Color32::DARK_RED));ui.colored_label(Color32::DARK_RED,format!("{} problem(s)",self.errors.len()));if ui.add(ui_icons::button(ui, Icon::Close, "Dismiss")).clicked(){self.errors.clear();}});egui::ScrollArea::vertical().id_salt("errors").max_height(90.0).show(ui,|ui|for error in &self.errors {ui.colored_label(Color32::DARK_RED,error);});}
         });
         egui::SidePanel::left("controls")
             .exact_width(265.0)
@@ -1495,6 +1514,12 @@ mod tests {
             let print = text_rect(shapes, "Print…");
             let counts = text_rect(shapes, "3 photos · 3 sheets");
             assert!(brand.height() >= 27.0);
+            let about = text_rect(shapes, "About");
+            assert!((brand.center().y - counts.center().y).abs() <= 1.0);
+            assert!((brand.center().y - about.center().y).abs() <= 1.0);
+            if width == 1180.0 {
+                assert!((brand.center().y - add.center().y).abs() <= 1.0);
+            }
             assert!(counts.left() > width * 0.7);
             assert!(clear.left() > add.right() && print.left() > clear.right());
             // Include the first button's icon and symmetric button padding.
@@ -1522,6 +1547,36 @@ mod tests {
             text_rect(shapes, "PrintMarten on GitHub");
             text_rect(shapes, "Licensed under GNU GPL v3 (GPL-3.0-only)");
         }
+    }
+
+    #[test]
+    fn mixed_controls_share_a_vertical_center() {
+        let (context, _) = app();
+        let mut dimensions = "10".to_owned();
+        let mut margin = 2.0;
+        let mut zoom = 1.0;
+        let _ = context.run(egui::RawInput::default(), |ctx| {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                for field in 0..3 {
+                    ui_icons::row(ui, |ui| {
+                        let icon = ui.add(Icon::Ruler.image(Color32::BLACK)).rect;
+                        let label = ui.label("Value").rect;
+                        let input = match field {
+                            0 => ui.text_edit_singleline(&mut dimensions).rect,
+                            1 => ui.add(egui::DragValue::new(&mut margin)).rect,
+                            _ => ui.add(egui::Slider::new(&mut zoom, 0.3..=2.0)).rect,
+                        };
+                        let button = ui.add(ui_icons::button(ui, Icon::Check, "Apply")).rect;
+                        for rect in [label, input, button] {
+                            assert!(
+                                (rect.center().y - icon.center().y).abs() <= 1.0,
+                                "control {field}: icon {icon:?}, widget {rect:?}",
+                            );
+                        }
+                    });
+                }
+            });
+        });
     }
 
     #[test]

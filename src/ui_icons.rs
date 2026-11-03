@@ -60,11 +60,44 @@ pub fn button(ui: &egui::Ui, icon: Icon, label: &str) -> egui::Button<'static> {
         .image_tint_follows_text_color(true)
         .wrap_mode(egui::TextWrapMode::Extend)
 }
+/// Reserve the tallest control's height before placing any labels or icons.
+/// egui's default horizontal row starts at `interact_size.y` and cannot
+/// recenter earlier widgets when a later widget makes the row taller.
+pub fn row<R>(
+    ui: &mut egui::Ui,
+    contents: impl FnOnce(&mut egui::Ui) -> R,
+) -> egui::InnerResponse<R> {
+    let height = [
+        egui::TextStyle::Body,
+        egui::TextStyle::Button,
+        egui::TextStyle::Monospace,
+    ]
+    .iter()
+    .map(|style| ui.text_style_height(style))
+    .fold(0.0_f32, f32::max)
+        + ui.spacing().button_padding.y * 2.0;
+    let height = height.max(30.0).max(ui.spacing().interact_size.y);
+    ui.allocate_ui_with_layout(
+        Vec2::new(ui.available_width(), height),
+        egui::Layout::left_to_right(egui::Align::Center),
+        |ui| {
+            // Composite widgets (notably Slider) create their own horizontal rows.
+            ui.spacing_mut().interact_size.y = height;
+            contents(ui)
+        },
+    )
+}
+
 pub fn heading(ui: &mut egui::Ui, icon: Icon, label: &str) {
-    ui.horizontal(|ui| {
-        ui.add(icon.image(ui.visuals().text_color()));
-        ui.heading(label);
-    });
+    let height = ui.text_style_height(&egui::TextStyle::Heading).max(17.0);
+    ui.allocate_ui_with_layout(
+        Vec2::new(ui.available_width(), height),
+        egui::Layout::left_to_right(egui::Align::Center),
+        |ui| {
+            ui.add(icon.image(ui.visuals().text_color()));
+            ui.heading(label);
+        },
+    );
 }
 
 #[cfg(test)]
