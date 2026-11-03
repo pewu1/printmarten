@@ -10,6 +10,7 @@ import sys
 import tarfile
 import urllib.request
 import cmake as cmake_package
+from native_source_fixes import apply_libde265_fixes
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCES = [
@@ -58,10 +59,12 @@ def main():
         raise RuntimeError("Install scripts/requirements.txt first")
     for name, version, digest in SOURCES:
         source = fetch(name, version, digest, downloads)
+        if name == "libde265":
+            apply_libde265_fixes(source)
         build = downloads / f"build-{name}"
         common = [f"-DCMAKE_INSTALL_PREFIX={prefix}", "-DCMAKE_INSTALL_LIBDIR=lib",
                   f"-DCMAKE_PREFIX_PATH={prefix}", "-DCMAKE_BUILD_TYPE=Release",
-                  "-DBUILD_SHARED_LIBS=ON", "-DBUILD_TESTING=OFF"]
+                  "-DBUILD_SHARED_LIBS=ON"]
         if sys.platform == "darwin":
             common += ["-DCMAKE_OSX_DEPLOYMENT_TARGET=13.0", "-DCMAKE_INSTALL_NAME_DIR=@rpath", "-DCMAKE_INSTALL_RPATH=@loader_path"]
         elif sys.platform == "win32":
@@ -73,6 +76,7 @@ def main():
         else:
             # One built-in decoder; no plugin discovery, encoders, or optional codecs.
             flags = ["-DENABLE_PLUGIN_LOADING=OFF", "-DWITH_LIBDE265=ON",
+                     "-DBUILD_TESTING=OFF",
                      "-DWITH_LIBDE265_PLUGIN=OFF", "-DWITH_EXAMPLES=OFF", "-DWITH_GDK_PIXBUF=OFF",
                      "-DWITH_EXAMPLE_HEIF_THUMB=OFF", "-DWITH_EXAMPLE_HEIF_VIEW=OFF",
                      "-DBUILD_DOCUMENTATION=OFF", "-DWITH_UNCOMPRESSED_CODEC=OFF",

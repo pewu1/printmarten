@@ -28,6 +28,7 @@ do not require it):
 python3 -m venv target/tools
 # Windows: target/tools/Scripts/activate
 source target/tools/bin/activate
+python -m pip install --upgrade pip
 python -m pip install -r scripts/requirements.txt
 python scripts/build_native.py
 ```
@@ -37,6 +38,11 @@ libde265 libraries without installing them system-wide. Development builds find
 `target/native/lib`; `PRINTMARTEN_NATIVE_LIB_DIR` overrides the lookup directory.
 On Windows, point that variable at `target/native/bin` if necessary. Source
 archives are cached in `target/native-sources`.
+The build applies the pinned libde265 source fixes in
+`scripts/native_source_fixes.py`, including CMake policy compatibility and C++17
+annotations for declarations used only in debug or experimental code. Compiler
+warnings remain enabled. Local and CI builds upgrade pip to the newest release
+supported by their Python interpreter before installing packaging tools.
 
 To package locally after building native dependencies:
 
@@ -53,6 +59,11 @@ respective operating systems. Windows packaging also requires NSIS 3.11. Install
 v14 x64 runtime separately for execution and package smoke checks; it is not
 redistributed inside GPL application packages. CI builds each architecture on a
 native runner, including separate Intel and Apple Silicon macOS runners.
+
+After all four builds succeed on `main`, GitHub Actions publishes a normal
+release tagged `main-<commit SHA>` and marks it as latest. The release includes
+the application packages, checksums, corresponding application source, and
+native codec source archives. Manual workflow runs on `main` use the same path.
 
 ## Architecture and validation
 
